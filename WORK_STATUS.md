@@ -100,3 +100,11 @@ GitHub discovery run `34492002323` executed, but the search response did not con
 - GitHub preservation and source tree equality verified. Last verified code/automation commit before final documentation: `b3a0185f18738e6e969eb48e140326b6ba46fac7`.
 - English preview tested: document language `en`, direction `ltr`, duration `1h 37m`; Arabic remains `1 ساعة و37 دقيقة`. Cases 90, 120 and 142 minutes and unique catalog identifiers passed direct checks.
 - The public catalog remains one movie without licensed subtitles, and cloud-browser playback returned the source error state. No additional film was published.
+
+## Genre and series update
+
+- Owner changed the empty-genre rule: show all 19 genres in both Movies and Series. Genre grids now wrap so every category is visible; movie and series results remain isolated.
+- Series is presented as a normal section, with only “لا توجد مسلسلات متاحة حاليًا.” No technical readiness or licensing explanation in the empty state.
+- Discovery run 34492224567 completed successfully: 986 distinct candidate records, 983 with video files, zero discovery-level errors. Of the records, 27 have a reported media length of at least 5,400 seconds; this does not establish feature-film classification or rights. The rest mostly include shorts, tutorials, broadcasts and other non-feature material. No new movie qualified for publication.
+- Discovery query now restricts results to feature-film collection/title/subject signals. This prioritizes candidates but never grants publication rights.
+- Current published catalog remains 1 movie, 0 series. Existing film includes poster, bilingual synopsis and permanent details route.

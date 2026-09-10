@@ -32,6 +32,7 @@ def discover(limit, workers, refresh):
     cache = ROOT / "work/discovery-cache"
     licenses = [f'"{scheme}://creativecommons.org/licenses/{kind}/{version}/"' for scheme in ("http", "https") for kind in ("by", "by-sa") for version in ("2.0", "2.5", "3.0", "4.0")]
     query = 'mediatype:movies AND year:[2005 TO 2100] AND licenseurl:(' + ' OR '.join(licenses) + ')'
+    query += ' AND (collection:feature_films OR title:("feature film" OR "full movie" OR "full film" OR largometraje OR "long métrage") OR subject:("feature film" OR "feature films"))'
     candidates, errors = [], []
     for page in range(1, (limit + 99) // 100 + 1):
         params = urllib.parse.urlencode({"q": query, "fl[]": "identifier", "rows": min(100, limit - len(candidates)), "page": page, "output": "json"})

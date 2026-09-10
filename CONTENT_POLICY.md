@@ -56,7 +56,7 @@ Targets guide discovery but never override rights, runtime, playback health, saf
 | Biography | سيرة ذاتية | 50 |
 | Sport | رياضي | 50 |
 
-No empty genre is exposed merely to inflate the taxonomy. One film may legitimately count toward multiple genres, but the catalog never duplicates the film record.
+The owner now explicitly requests all 19 genre options in both Movies and Series, including empty categories. Empty categories show honest empty states and do not imply available titles. One film may legitimately count toward multiple genres, but the catalog never duplicates the film record.
 
 ## Current review inventory
 
