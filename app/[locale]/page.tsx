@@ -1,4 +1,5 @@
 import CineyahApp from "@/components/cineyah-app";
+import MovieLinkGuard from "@/components/movie-link-guard";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -10,5 +11,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function LocalePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!["ar", "en"].includes(locale)) notFound();
-  return <CineyahApp locale={locale === "en" ? "en" : "ar"} />;
+  const resolvedLocale = locale === "en" ? "en" : "ar";
+  return <>
+    <MovieLinkGuard locale={resolvedLocale} />
+    <CineyahApp locale={resolvedLocale} />
+  </>;
 }
