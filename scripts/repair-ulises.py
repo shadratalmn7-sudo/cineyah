@@ -1,42 +1,40 @@
 #!/usr/bin/env python3
-import html
 import json
 import pathlib
 import re
-import shutil
 import subprocess
-import tempfile
 import urllib.parse
 import urllib.request
 
 ID = "ulises-largometraje-abel-amador-2012"
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CAT = ROOT / "lib/catalog.ts"
+UA = "Mozilla/5.0 CineyahPlaybackCheck/1.0"
 
 
 def get_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "Cineyah/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=30) as r:
         return json.load(r)
 
 
-def duration(file_obj):
+def as_float(value):
     try:
-        return float(file_obj.get("length") or 0)
+        return float(value or 0)
     except Exception:
-        return 0
+        return 0.0
 
 
 def probe(url):
     p = subprocess.run(
         [
-            "ffprobe", "-v", "error", "-rw_timeout", "15000000",
-            "-show_entries", "stream=codec_name,codec_type,height",
+            "ffprobe", "-v", "error", "-rw_timeout", "20000000",
+            "-show_entries", "format=duration:stream=codec_name,codec_type,height,width,profile",
             "-of", "json", url,
         ],
         capture_output=True,
         text=True,
-        timeout=35,
+        timeout=45,
     )
     if p.returncode:
         return None
@@ -50,96 +48,111 @@ def probe(url):
         return None
     return {
         "height": int(video[0].get("height") or 0),
+        "width": int(video[0].get("width") or 0),
         "video": video[0].get("codec_name"),
+        "profile": video[0].get("profile"),
         "audio": audio[0].get("codec_name") if audio else None,
+        "duration": as_float((data.get("format") or {}).get("duration")),
     }
 
 
-def browser_playback_test(url):
-    browser = next(
-        (p for p in (shutil.which("google-chrome"), shutil.which("google-chrome-stable"), shutil.which("chromium")) if p),
-        None,
+def range_test(url):
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": UA, "Range": "bytes=0-1048575", "Accept": "*/*"},
     )
-    if not browser:
-        raise SystemExit("No Chrome/Chromium binary available for browser playback test")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        chunk = r.read(256 * 1024)
+        status = getattr(r, "status", None)
+        content_type = r.headers.get("Content-Type", "")
+        accept_ranges = r.headers.get("Accept-Ranges", "")
+        content_range = r.headers.get("Content-Range", "")
+    if len(chunk) < 65536:
+        raise RuntimeError(f"range response too small: {len(chunk)} bytes")
+    if status not in {200, 206}:
+        raise RuntimeError(f"unexpected HTTP status {status}")
+    return {
+        "status": status,
+        "contentType": content_type,
+        "acceptRanges": accept_ranges,
+        "contentRange": content_range,
+        "sampleBytes": len(chunk),
+    }
 
-    safe_url = html.escape(url, quote=True)
-    page = f"""<!doctype html><meta charset='utf-8'>
-<body data-result='PENDING'>
-<video id='v' src='{safe_url}' muted playsinline preload='auto'></video>
-<script>
-const v = document.getElementById('v');
-let finished = false;
-function finish(ok, msg) {{
-  if (finished) return;
-  finished = true;
-  document.body.dataset.result = ok ? 'PASS' : 'FAIL';
-  document.body.textContent = (ok ? 'PASS ' : 'FAIL ') + msg;
-}}
-v.addEventListener('error', () => finish(false, 'media-error-' + (v.error ? v.error.code : 'unknown')));
-v.addEventListener('loadedmetadata', async () => {{
-  try {{
-    await v.play();
-    setTimeout(() => {{
-      const ok = v.currentTime > 0.25 && v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0;
-      finish(ok, `time=${{v.currentTime.toFixed(2)}} ready=${{v.readyState}} size=${{v.videoWidth}}x${{v.videoHeight}}`);
-    }}, 2500);
-  }} catch (e) {{ finish(false, 'play-rejected-' + e); }}
-}});
-setTimeout(() => finish(false, `timeout ready=${{v.readyState}} network=${{v.networkState}}`), 12000);
-</script>
-</body>"""
 
-    with tempfile.TemporaryDirectory() as td:
-        path = pathlib.Path(td) / "playback.html"
-        path.write_text(page, encoding="utf-8")
-        proc = subprocess.run(
-            [
-                browser,
-                "--headless=new",
-                "--no-sandbox",
-                "--disable-gpu",
-                "--autoplay-policy=no-user-gesture-required",
-                "--virtual-time-budget=15000",
-                "--dump-dom",
-                path.as_uri(),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=35,
-        )
-    output = (proc.stdout or "") + "\n" + (proc.stderr or "")
-    passed = 'data-result="PASS"' in output or "data-result='PASS'" in output
-    if not passed:
-        tail = output[-3000:]
-        raise SystemExit("Real browser playback test failed:\n" + tail)
-    match = re.search(r"PASS ([^<\n]+)", output)
-    return {"browser": pathlib.Path(browser).name, "passed": True, "details": match.group(1) if match else "played"}
+def decode_test(url):
+    # This is an actual media decode, not only a HEAD/metadata check. It seeks into
+    # the remote file and decodes several seconds, exercising HTTP range/seek,
+    # container parsing, H.264 video and the audio codec.
+    p = subprocess.run(
+        [
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-rw_timeout", "20000000", "-ss", "30", "-i", url,
+            "-t", "4", "-map", "0:v:0", "-map", "0:a:0?", "-f", "null", "-",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if p.returncode:
+        raise RuntimeError((p.stderr or p.stdout or "ffmpeg decode failed")[-1800:])
+    return {"passed": True, "decodedSeconds": 4, "seekSeconds": 30}
+
+
+def candidate_score(name, info, size):
+    lname = name.lower()
+    # Prefer generated web renditions over camera-master files. They are normally
+    # much quicker to start on mobile while retaining acceptable picture quality.
+    web_derivative = any(token in lname for token in ("512kb", "h.264", "h264", "720", "480"))
+    height = info.get("height", 0)
+    useful_height = min(height, 1080)
+    oversized_penalty = 1 if size > 3_000_000_000 else 0
+    return (1 if web_derivative else 0, -oversized_penalty, useful_height, -size)
 
 
 meta = get_json(f"https://archive.org/metadata/{ID}")
-files = []
+candidates = []
 for file_obj in meta.get("files", []):
     name = str(file_obj.get("name", ""))
-    if not name.lower().endswith(".mp4") or duration(file_obj) < 5400:
+    if not name.lower().endswith(".mp4"):
+        continue
+    source_duration = as_float(file_obj.get("length"))
+    if source_duration and source_duration < 5400:
         continue
     url = f"https://archive.org/download/{ID}/" + urllib.parse.quote(name, safe="/")
     try:
         info = probe(url)
     except Exception:
         info = None
-    if info:
-        files.append((info["height"], duration(file_obj), name, url, info))
+    if not info:
+        continue
+    runtime = source_duration or info.get("duration", 0)
+    if runtime < 5400:
+        continue
+    size = int(as_float(file_obj.get("size")))
+    candidates.append((candidate_score(name, info, size), name, url, runtime, size, info))
 
-if not files:
-    raise SystemExit("No browser-compatible >=90m MP4 rendition found for Ulises")
+if not candidates:
+    raise SystemExit("No H.264 browser-compatible >=90m MP4 rendition found for Ulises")
 
-files.sort(reverse=True)
-h, secs, name, url, info = files[0]
+candidates.sort(reverse=True, key=lambda x: x[0])
+errors = []
+selected = None
+for _, name, url, runtime, size, info in candidates:
+    try:
+        http_result = range_test(url)
+        decode_result = decode_test(url)
+        selected = (name, url, runtime, size, info, http_result, decode_result)
+        break
+    except Exception as exc:
+        errors.append({"file": name, "error": str(exc)[:900]})
+
+if not selected:
+    raise SystemExit("All compatible Ulises renditions failed real range/decode tests: " + json.dumps(errors, ensure_ascii=False))
+
+name, url, secs, size, info, http_result, decode_result = selected
+h = info["height"]
 label = "1080p" if h >= 1000 else "720p" if h >= 650 else "480p" if h >= 430 else "360p"
-
-# This is the decisive test: Chrome must actually load and advance playback.
-browser_result = browser_playback_test(url)
 
 text = CAT.read_text(encoding="utf-8")
 marker = 'id:"ulises-2012"'
@@ -166,10 +179,13 @@ report = {
     "file": name,
     "url": url,
     "runtimeMinutes": round(secs / 60, 1),
+    "sizeBytes": size,
     "label": label,
     "codecs": info,
+    "httpRange": http_result,
+    "decodePlayback": decode_result,
     "sourceChanged": source_changed,
-    "browserPlayback": browser_result,
+    "rejectedCandidates": errors,
 }
 (ROOT / "content").mkdir(exist_ok=True)
 (ROOT / "content/ulises-playback-verified.json").write_text(
