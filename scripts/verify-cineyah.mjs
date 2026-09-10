@@ -6,6 +6,8 @@ const home=read("components/movie-library-home.tsx");
 const detail=read("components/movie-detail-page.tsx");
 const legacy=read("components/cineyah-app.tsx");
 const route=read("app/[locale]/movies/[id]/page.tsx");
+const localeRoute=read("app/[locale]/page.tsx");
+const nextConfig=read("next.config.ts");
 
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 const runtimes=[...catalog.matchAll(/runtimeMinutes:(\d+)/g)].map(match=>Number(match[1]));
@@ -15,8 +17,8 @@ const horrorCount=(catalog.match(/genres:\[[^\]]*"horror"/g)||[]).length;
 assert(horrorCount>=20,`Expected at least 20 horror movies, found ${horrorCount}`);
 const genreUnion=catalog.match(/export type Genre = ([^;]+);/)?.[1]??"";
 assert((genreUnion.match(/\|/g)||[]).length+1===19,"Genre union must contain exactly 19 genres");
-assert(home.includes('href={`/${locale}/movies/${movie.id}/`}'),"Movie cards must link to standalone routes");
-assert(home.includes('href={`/${locale}/movies/${hero.id}/`}'),"Hero actions must link to standalone routes");
+assert(home.includes('sitePath(`/${locale}/movies/${movie.id}/`)'),"Movie cards must link to hosting-aware standalone routes");
+assert(home.includes('sitePath(`/${locale}/movies/${hero.id}/`)'),"Hero actions must link to hosting-aware standalone routes");
 assert(!home.includes("setSelected")&&!home.includes("modal-backdrop")&&!home.includes("watch-layer"),"Home must not contain preview/player overlay state");
 assert(!legacy.includes("setSelected")&&!legacy.includes("watching")&&!legacy.includes("modal-backdrop"),"Legacy CineyahApp still contains overlay logic");
 assert(home.includes("لا توجد مسلسلات متاحة حاليًا."),"Series accepted-empty message is missing");
@@ -35,5 +37,7 @@ const ulises=catalog.slice(catalog.indexOf('id:"ulises-2012"'),catalog.indexOf('
 assert(ulises.includes("sources:[]"),"Ulises playback must remain disabled until a browser-suitable source is verified");
 assert(ulises.includes("downloadAllowed:true")&&ulises.includes("downloadUrl:"),"Ulises legal download metadata is missing");
 assert(route.includes("generateStaticParams"),"Movie routes must be statically enumerated");
+assert(localeRoute.includes("generateStaticParams"),"Locale routes must be statically enumerated for GitHub Pages export");
+assert(nextConfig.includes('output: "export"')&&nextConfig.includes('basePath'),"GitHub Pages static export mode is missing");
 assert(route.includes("alternates")&&route.includes("languages")&&route.includes('"@type":"Movie"'),"Movie SEO metadata/structured data missing");
-console.log(JSON.stringify({movies:runtimes.length,horror:horrorCount,minRuntime:Math.min(...runtimes),homeOverlayFree:true,noYouTubePlayer:true,ulisesPlayback:"disabled-pending-safari-suitable-source"},null,2));
+console.log(JSON.stringify({movies:runtimes.length,horror:horrorCount,minRuntime:Math.min(...runtimes),homeOverlayFree:true,noYouTubePlayer:true,hostingAwareRoutes:true,ulisesPlayback:"disabled-pending-safari-suitable-source"},null,2));

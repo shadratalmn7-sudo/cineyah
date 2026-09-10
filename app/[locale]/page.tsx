@@ -1,6 +1,11 @@
 import MovieLibraryHome from "@/components/movie-library-home";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { sitePath } from "@/lib/site-path";
+
+export function generateStaticParams() {
+  return [{ locale: "ar" }, { locale: "en" }];
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -9,7 +14,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     description: locale === "en"
       ? "Browse movies and open a dedicated page for each title with story, details and legal viewing options."
       : "تصفح الأفلام وافتح صفحة مستقلة لكل فيلم تحتوي على القصة والمعلومات وخيارات المشاهدة القانونية.",
-    alternates: { canonical: `/${locale}/`, languages: { ar: "/ar/", en: "/en/" } },
+    alternates: {
+      canonical: sitePath(`/${locale}/`),
+      languages: { ar: sitePath("/ar/"), en: sitePath("/en/") },
+    },
   };
 }
 
