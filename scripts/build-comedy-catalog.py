@@ -38,9 +38,14 @@ BAD_TERMS = {
     "podcast","radio show","news","festival","performance","concert","improv","showcase",
     "vhs recording","woc recording","greatest hits","complete series","season ","series one","series two",
     "lightning talks","channel archive","livestream","live stream","full season","all episodes",
-    "movie collection","movies 1-","movies 1–","full vhs","parody thomas & friends"
+    "movie collection","movies 1-","movies 1–","full vhs","parody thomas & friends",
+    "vlc record","cctv recording","cctv recordings","tv recording","tv recordings","recital",
+    "talent night","broadcast recording","broadcast recordings","vhs ajánló","vhs ajanlo",
+    "dead and buried treasures","laserdisc","channel recording","channel recordings","playlist"
 }
 COMEDY_TERMS = ("comedy","comed","slapstick","farce","romantic comedy","romcom","satire","humor","humour")
+FEATURE_TERMS = ("feature film","feature films","feature-length","feature length","full movie","full film","motion picture")
+FEATURE_COLLECTIONS = {"feature_films","featurefilms","moviesandfilms"}
 
 
 def fetch_json(url, timeout=25):
@@ -55,9 +60,13 @@ def clean_text(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
+def values(value):
+    return value if isinstance(value, list) else ([value] if value else [])
+
+
 def parse_year(info):
     for key in ("year","date"):
-        m = re.search(r"\b(19\d{2}|20\d{2})\b", clean_text(info.get(key)))
+        m = re.search(r"\b(18\d{2}|19\d{2}|20\d{2})\b", clean_text(info.get(key)))
         if m: return int(m.group(1))
     return 2000
 
@@ -105,16 +114,22 @@ def probe_media(url):
 
 def normalized_title(title):
     title = re.sub(r"\[[^\]]*\]|\([^)]*(?:rip|dub|sub|1080|720|vhs|dvd)[^)]*\)", " ", title, flags=re.I)
-    title = re.sub(r"\b(19\d{2}|20\d{2})\b", " ", title)
+    title = re.sub(r"\b(18\d{2}|19\d{2}|20\d{2})\b", " ", title)
     return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
 
 
-def looks_like_single_feature(title, description):
-    low = f"{title} {description}".lower()
+def looks_like_single_feature(info, title, description, subjects):
+    low = f"{title} {description} {' '.join(subjects)}".lower()
     if any(term in low for term in BAD_TERMS): return False
     if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*\d+)\b", title, re.I): return False
-    # Reject obvious channel/user uploads and multi-title bundles masquerading as one feature.
     if re.search(r"\b(on ch\.?\s*\d+|youtube channel|twitch|playlist|movies?\s+\d+[-–]\d+)\b", low, re.I): return False
+    if re.match(r"^(vlc|record|capture|tape|disc\s*\d+|volume\s*\d+)", title.strip(), re.I): return False
+    collections={clean_text(x).lower() for x in values(info.get("collection"))}
+    explicit_feature = any(term in low for term in FEATURE_TERMS)
+    curated_feature = bool(collections & FEATURE_COLLECTIONS)
+    # A 90-minute upload is not automatically a feature film. Require explicit
+    # feature/movie evidence or membership in a curated feature-film collection.
+    if not (explicit_feature or curated_feature): return False
     return True
 
 
@@ -124,9 +139,9 @@ def inspect(identifier):
         meta = fetch_json(f"https://archive.org/metadata/{safe}")
         info = meta.get("metadata",{})
         title, description = clean_text(info.get("title")), clean_text(info.get("description"))
-        subjects = info.get("subject",[]); subjects = subjects if isinstance(subjects,list) else [subjects]
-        haystack = " ".join([title,description,*[clean_text(x) for x in subjects]]).lower()
-        if not title or not looks_like_single_feature(title, description): return None
+        subjects = [clean_text(x) for x in values(info.get("subject"))]
+        haystack = " ".join([title,description,*subjects]).lower()
+        if not title or not looks_like_single_feature(info, title, description, subjects): return None
         if not any(term in haystack for term in COMEDY_TERMS): return None
         lic = clean_text(info.get("licenseurl"))
         if lic not in LICENSES: return None
@@ -167,7 +182,11 @@ def inspect(identifier):
 def discover_ids():
     license_q = " OR ".join(f'\"{x}\"' for x in LICENSES)
     terms=" OR ".join(COMEDY_TERMS)
-    query = 'mediatype:movies AND licenseurl:(' + license_q + ') AND (subject:(' + terms + ') OR title:(' + terms + ') OR description:(' + terms + '))'
+    # Start from items explicitly described as films/features or held in the
+    # Internet Archive feature-film collection. This prevents long TV captures,
+    # compilations and recordings from qualifying merely because they run >90m.
+    feature_q='(collection:feature_films OR subject:("feature film" OR "feature films") OR description:("feature film" OR "feature-length" OR "full movie" OR "full film"))'
+    query = 'mediatype:movies AND licenseurl:(' + license_q + ') AND ' + feature_q + ' AND (subject:(' + terms + ') OR title:(' + terms + ') OR description:(' + terms + '))'
     ids=[]
     for page in range(1,105):
         rows=min(100,SEARCH_LIMIT-len(ids))
