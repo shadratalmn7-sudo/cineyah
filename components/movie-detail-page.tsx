@@ -61,7 +61,7 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
         onTimeUpdate={e=>{setTime(e.currentTarget.currentTime);localStorage.setItem(`cineyah:progress:${movie.id}`,String(e.currentTarget.currentTime))}}
         onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onError={()=>setMediaError(true)} />
       <video ref={previewRef} className={styles.previewVideoSource} src={source.url} muted playsInline preload="metadata" aria-hidden="true" />
-      {mediaError&&<div className={styles.playerError}><strong>{locale==="ar"?"تعذر تشغيل هذا المصدر":"This source could not be played"}</strong><p>{locale==="ar"?"سنجرّب المصدر مرة أخرى. إذا استمر الخطأ فلن نعتمد هذا الفيلم كفيلم جاهز.":"We will retry the source. If it keeps failing, the title will not be treated as ready."}</p><button onClick={()=>{setMediaError(false);videoRef.current?.load()}}>{locale==="ar"?"إعادة المحاولة":"Retry"}</button></div>}
+      {mediaError&&<div className={styles.playerError}><strong>{locale==="ar"?"تعذر تشغيل هذا المصدر":"This source could not be played"}</strong><p>{locale==="ar"?"تعذر تحميل ملف الفيلم من المصدر الحالي. لن نعتمد هذا المصدر إذا استمر بالفشل.":"The current movie source could not be loaded. It will not be treated as ready if it keeps failing."}</p><button onClick={()=>{setMediaError(false);videoRef.current?.load()}}>{locale==="ar"?"إعادة المحاولة":"Retry"}</button></div>}
       <div className={styles.playerBrand}><b>CINEYAH</b><span>{movie.titleEn}</span></div>
       <div className={styles.controls}>
         <div ref={seekRef} className={styles.seekWrap} onPointerMove={e=>pointerPreview(e.clientX)} onPointerLeave={()=>setPreview(null)}>
@@ -89,6 +89,13 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
   const background=movie.backdrop??movie.poster;
   const genreText=useMemo(()=>movie.genres.join(" · "),[movie.genres]);
 
+  useEffect(()=>{
+    if(!watching)return;
+    const previous=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    return()=>{document.body.style.overflow=previous};
+  },[watching]);
+
   return <div className={styles.page} dir={rtl?"rtl":"ltr"}>
     <header className={styles.header}>
       <a href={`/${locale}/`} className={styles.back}><ArrowLeft/>{locale==="ar"?"الأفلام":"Movies"}</a>
@@ -97,7 +104,7 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
     </header>
 
     <main>
-      <section className={styles.hero} style={{backgroundImage:`linear-gradient(90deg,rgba(3,5,10,.97) 2%,rgba(3,5,10,.78) 38%,rgba(3,5,10,.2) 72%,rgba(3,5,10,.85)),linear-gradient(0deg,#050811 1%,transparent 45%),url('${background}')`}}>
+      <section className={styles.hero} style={{backgroundImage:`url('${background}')`}}>
         <div className={styles.heroInner}>
           <img className={styles.poster} src={movie.poster} alt={`${movie.titleEn} — ${movie.titleAr}`}/>
           <div className={styles.copy}>
