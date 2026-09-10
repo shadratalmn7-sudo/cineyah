@@ -1,0 +1,95 @@
+name: Parallel 10 playable movies per genre
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build-playable-genre.py'
+      - 'scripts/merge-playable-genres.py'
+      - '.github/workflows/build-playable-genres-parallel.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cineyah-parallel-playable-genres
+  cancel-in-progress: true
+
+jobs:
+  verify-genre:
+    strategy:
+      fail-fast: false
+      max-parallel: 19
+      matrix:
+        genre: [action, horror, comedy, drama, romance, thriller, crime, mystery, adventure, scifi, fantasy, war, western, family, animation, musical, history, biography, sport]
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Verify 10 playable feature films
+        env:
+          CINEYAH_GENRE: ${{ matrix.genre }}
+          CINEYAH_TARGET: '10'
+          CINEYAH_MAX_PAGES: '8'
+        run: python scripts/build-playable-genre.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: genre-${{ matrix.genre }}
+          path: work/genre-${{ matrix.genre }}.json
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-build-publish:
+    needs: verify-genre
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: genre-*
+          path: work/genres
+          merge-multiple: false
+      - name: Merge verified batches
+        run: python scripts/merge-playable-genres.py
+      - name: Show exact coverage
+        run: cat content/playable-coverage.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.19.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify UI and catalog invariants
+        run: node scripts/verify-cineyah.mjs
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit
+      - name: Verify Netlify static export
+        env:
+          STATIC_EXPORT: 'true'
+          NEXT_PUBLIC_SITE_ORIGIN: 'https://cineyah-movies.netlify.app'
+        run: pnpm exec next build
+      - name: Publish verified playable catalog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/catalog.ts content/generated-playable.json content/playable-coverage.json
+          if git diff --cached --quiet; then
+            echo "No catalog changes"
+            exit 0
+          fi
+          git commit -m "feat: publish parallel playback-verified movie catalog"
+          git pull --rebase origin main
+          git push origin HEAD:main
