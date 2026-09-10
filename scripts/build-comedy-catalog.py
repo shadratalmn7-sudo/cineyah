@@ -14,7 +14,6 @@ TARGET = 100
 SEARCH_LIMIT = 10000
 UA = "Cineyah/1.0 comedy-batch"
 
-# Commercial-safe reuse only: CC BY / BY-SA / BY-ND, CC0 and Public Domain Mark.
 LICENSES = [
     "https://creativecommons.org/licenses/by/2.0/",
     "https://creativecommons.org/licenses/by/2.5/",
@@ -44,8 +43,9 @@ BAD_TERMS = {
     "dead and buried treasures","laserdisc","channel recording","channel recordings","playlist"
 }
 COMEDY_TERMS = ("comedy","comed","slapstick","farce","romantic comedy","romcom","satire","humor","humour")
-FEATURE_TERMS = ("feature film","feature films","feature-length","feature length","full movie","full film","motion picture")
-FEATURE_COLLECTIONS = {"feature_films","featurefilms","moviesandfilms"}
+FEATURE_TERMS = ("feature film","feature films","feature-length","feature length","full movie","full film","motion picture","feature movie")
+MOVIE_EVIDENCE = ("movie","film","cinema","motion picture","feature")
+FEATURE_COLLECTIONS = {"feature_films","featurefilms","moviesandfilms","opensource_movies"}
 
 
 def fetch_json(url, timeout=25):
@@ -115,21 +115,26 @@ def probe_media(url):
 def normalized_title(title):
     title = re.sub(r"\[[^\]]*\]|\([^)]*(?:rip|dub|sub|1080|720|vhs|dvd)[^)]*\)", " ", title, flags=re.I)
     title = re.sub(r"\b(18\d{2}|19\d{2}|20\d{2})\b", " ", title)
+    title = re.sub(r"\b(full movie|full film|feature film|movie|film)\b", " ", title, flags=re.I)
     return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
 
 
-def looks_like_single_feature(info, title, description, subjects):
+def looks_like_single_feature(info, title, description, subjects, files):
     low = f"{title} {description} {' '.join(subjects)}".lower()
     if any(term in low for term in BAD_TERMS): return False
-    if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*\d+)\b", title, re.I): return False
+    if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*[2-9]\d*)\b", title, re.I): return False
     if re.search(r"\b(on ch\.?\s*\d+|youtube channel|twitch|playlist|movies?\s+\d+[-–]\d+)\b", low, re.I): return False
     if re.match(r"^(vlc|record|capture|tape|disc\s*\d+|volume\s*\d+)", title.strip(), re.I): return False
     collections={clean_text(x).lower() for x in values(info.get("collection"))}
     explicit_feature = any(term in low for term in FEATURE_TERMS)
     curated_feature = bool(collections & FEATURE_COLLECTIONS)
-    # A 90-minute upload is not automatically a feature film. Require explicit
-    # feature/movie evidence or membership in a curated feature-film collection.
-    if not (explicit_feature or curated_feature): return False
+    movie_evidence = any(term in low for term in MOVIE_EVIDENCE)
+    plausible_files = [f for f in files if str(f.get("name","")).lower().endswith((".mp4",".webm"))]
+    long_hints = [reported_seconds(f) for f in plausible_files if reported_seconds(f) >= 5400]
+    # Accept a candidate only when metadata says it is movie/film-like (or it is
+    # in a curated movie collection) and the item is not a multi-program bundle.
+    if not (explicit_feature or curated_feature or movie_evidence): return False
+    if len(long_hints) > 4 and not explicit_feature: return False
     return True
 
 
@@ -140,15 +145,16 @@ def inspect(identifier):
         info = meta.get("metadata",{})
         title, description = clean_text(info.get("title")), clean_text(info.get("description"))
         subjects = [clean_text(x) for x in values(info.get("subject"))]
+        all_files = meta.get("files",[])
         haystack = " ".join([title,description,*subjects]).lower()
-        if not title or not looks_like_single_feature(info, title, description, subjects): return None
+        if not title or not looks_like_single_feature(info, title, description, subjects, all_files): return None
         if not any(term in haystack for term in COMEDY_TERMS): return None
         lic = clean_text(info.get("licenseurl"))
         if lic not in LICENSES: return None
-        files = [f for f in meta.get("files",[]) if str(f.get("name","")).lower().endswith((".mp4",".webm"))]
+        files = [f for f in all_files if str(f.get("name","")).lower().endswith((".mp4",".webm"))]
         files.sort(key=source_rank, reverse=True)
         chosen=None; seconds=0
-        for f in files[:5]:
+        for f in files[:7]:
             hinted=reported_seconds(f)
             if hinted and not (5400 <= hinted <= 12600): continue
             media_url = f"https://archive.org/download/{safe}/{urllib.parse.quote(f['name'], safe='/')}"
@@ -182,28 +188,30 @@ def inspect(identifier):
 def discover_ids():
     license_q = " OR ".join(f'\"{x}\"' for x in LICENSES)
     terms=" OR ".join(COMEDY_TERMS)
-    # Start from items explicitly described as films/features or held in the
-    # Internet Archive feature-film collection. This prevents long TV captures,
-    # compilations and recordings from qualifying merely because they run >90m.
-    feature_q='(collection:feature_films OR subject:("feature film" OR "feature films") OR description:("feature film" OR "feature-length" OR "full movie" OR "full film"))'
-    query = 'mediatype:movies AND licenseurl:(' + license_q + ') AND ' + feature_q + ' AND (subject:(' + terms + ') OR title:(' + terms + ') OR description:(' + terms + '))'
+    queries = [
+        'mediatype:movies AND licenseurl:(' + license_q + ') AND (subject:(' + terms + ') OR title:(' + terms + ') OR description:(' + terms + '))',
+        'mediatype:movies AND licenseurl:(' + license_q + ') AND collection:(feature_films OR featurefilms OR moviesandfilms OR opensource_movies) AND (comedy OR slapstick OR farce OR satire)',
+        'mediatype:movies AND licenseurl:(' + license_q + ') AND (title:("full movie" OR "full film") OR description:("full movie" OR "full film")) AND (comedy OR humor OR humour)',
+    ]
     ids=[]
-    for page in range(1,105):
-        rows=min(100,SEARCH_LIMIT-len(ids))
-        if rows<=0: break
-        params=urllib.parse.urlencode({"q":query,"fl[]":"identifier","rows":rows,"page":page,"output":"json"})
-        docs=fetch_json("https://archive.org/advancedsearch.php?"+params).get("response",{}).get("docs",[])
-        ids.extend(x["identifier"] for x in docs if x.get("identifier"))
-        if len(docs)<rows: break
+    for query in queries:
+        for page in range(1,101):
+            if len(ids) >= SEARCH_LIMIT: break
+            rows=min(100,SEARCH_LIMIT-len(ids))
+            params=urllib.parse.urlencode({"q":query,"fl[]":"identifier","rows":rows,"page":page,"output":"json"})
+            docs=fetch_json("https://archive.org/advancedsearch.php?"+params).get("response",{}).get("docs",[])
+            ids.extend(x["identifier"] for x in docs if x.get("identifier"))
+            if len(docs)<rows: break
+        if len(ids) >= SEARCH_LIMIT: break
     return list(dict.fromkeys(ids))
 
 
 def main():
     ids=discover_ids(); print(json.dumps({"stage":"discovery","candidates":len(ids)}),flush=True)
     found=[]; seen=set()
-    for start in range(0,len(ids),128):
-        chunk=ids[start:start+128]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+    for start in range(0,len(ids),160):
+        chunk=ids[start:start+160]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             for item in pool.map(inspect,chunk):
                 if item:
                     key=normalized_title(item["titleEn"])
@@ -218,6 +226,7 @@ def main():
     published=found[:TARGET]
     assert len({normalized_title(x["titleEn"]) for x in published}) == TARGET
     assert all(90 <= x["runtimeMinutes"] <= 210 for x in published)
+    assert all(x["sources"] and x["sources"][0]["url"].startswith("https://") for x in published)
     (ROOT/"content/generated-comedy.json").write_text(json.dumps(published,ensure_ascii=False,indent=2)+"\n")
     report={"target":TARGET,"verified":len(published),"distinct":TARGET,"generatedAt":dt.datetime.now(dt.timezone.utc).isoformat()}
     (ROOT/"content/comedy-batch-report.json").write_text(json.dumps(report,indent=2)+"\n")
