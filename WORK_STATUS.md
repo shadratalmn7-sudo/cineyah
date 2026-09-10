@@ -87,3 +87,9 @@ Last verified code commit before the GitHub handoff documentation: `f63e423ca584
 - Valkaama: creator CC BY-SA evidence, English SRT and direct MKV found. Kept in `content/review.json` because codec conversion, measured runtime, hosting and playback still need completion. Arabic subtitles absent.
 - Persistent ingestion, automated publication, secured admin, advertising and completed series playback remain unfinished. The discovery workflow is not a finished ingestion system.
 - Deployment of this update: pending at documentation commit; consult the final session response and Sites deployment status.
+
+### Deployment and first automation run
+
+Version 7 deployed successfully on 2026-09-10 from Sites commit `609dd2b2ef8d25b7f510c3ba90cb1b8f136aea34`, matching GitHub code commit `3af040758949c881f5e841c6362e2e6588fd791f`. The site is live at the URL above. Direct live HTTP validation was unavailable from this runtime.
+
+GitHub discovery run `34492002323` executed, but the search response did not contain `response`. The first query's leading wildcard license clauses were replaced with explicit quoted license URLs and error reporting improved. Re-run result must be checked; not yet a successful discovery run.

@@ -30,12 +30,16 @@ def fetch_json(url):
 
 def discover(limit, workers, refresh):
     cache = ROOT / "work/discovery-cache"
-    query = 'mediatype:movies AND year:[2005 TO 2100] AND (licenseurl:*creativecommons.org/licenses/by/* OR licenseurl:*creativecommons.org/licenses/by-sa/* OR licenseurl:*creativecommons.org/publicdomain/zero/*)'
+    licenses = [f'"{scheme}://creativecommons.org/licenses/{kind}/{version}/"' for scheme in ("http", "https") for kind in ("by", "by-sa") for version in ("2.0", "2.5", "3.0", "4.0")]
+    query = 'mediatype:movies AND year:[2005 TO 2100] AND licenseurl:(' + ' OR '.join(licenses) + ')'
     candidates, errors = [], []
     for page in range(1, (limit + 99) // 100 + 1):
         params = urllib.parse.urlencode({"q": query, "fl[]": "identifier", "rows": min(100, limit - len(candidates)), "page": page, "output": "json"})
         try:
-            docs = fetch_json("https://archive.org/advancedsearch.php?" + params)["response"]["docs"]
+            payload = fetch_json("https://archive.org/advancedsearch.php?" + params)
+            if "response" not in payload:
+                raise ValueError("Search API rejected query: " + json.dumps(payload)[:1500])
+            docs = payload["response"]["docs"]
         except Exception as error:
             errors.append({"stage": "discovery", "page": page, "error": str(error)})
             break
