@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import MovieDetailPage from "@/components/movie-detail-page";
-import { discoverableMovies, movieTitle } from "@/lib/catalog";
+import { movieTitle } from "@/lib/catalog";
+import { publicMovies } from "@/lib/public-catalog";
 import { sitePath } from "@/lib/site-path";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
-const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah.shadrat-almn7.chatgpt.site";
+const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah-movies.netlify.app";
 
 export function generateStaticParams(){
-  return ["ar","en"].flatMap(locale=>discoverableMovies.map(movie=>({locale,id:movie.id})));
+  return ["ar","en"].flatMap(locale=>publicMovies.map(movie=>({locale,id:movie.id})));
 }
 
 export async function generateMetadata({params}:Props):Promise<Metadata>{
   const {locale,id}=await params;
-  const movie=discoverableMovies.find(item=>item.id===id);
+  const movie=publicMovies.find(item=>item.id===id);
   if(!movie||!["ar","en"].includes(locale))return{robots:{index:false}};
   const lang=locale as "ar"|"en";
   const title=locale==="ar"?`فيلم ${movieTitle(movie,"ar")} (${movie.year}) — Cineyah`:`${movie.titleEn} (${movie.year}) — Cineyah`;
@@ -32,7 +33,7 @@ export async function generateMetadata({params}:Props):Promise<Metadata>{
 
 export default async function MoviePage({params}:Props){
   const {locale,id}=await params;
-  const movie=discoverableMovies.find(item=>item.id===id);
+  const movie=publicMovies.find(item=>item.id===id);
   if(!movie||!["ar","en"].includes(locale))notFound();
   const lang=locale as "ar"|"en";
   const image=[movie.backdrop,movie.poster]
