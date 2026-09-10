@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { publicMovies } from "@/lib/catalog";
+import { publicMovies } from "@/lib/public-catalog";
 import { sitePath } from "@/lib/site-path";
 
 export const dynamic = "force-static";
