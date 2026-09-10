@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, Globe2, Info, Play, Search } from "lucide-react";
 import { discoverableMovies, formatDuration, movieTitle, type ContentType, type Genre, type Locale } from "@/lib/catalog";
+import { sitePath } from "@/lib/site-path";
 import styles from "./movie-library-home.module.css";
 
 const genreLabels: Record<Genre, { ar: string; en: string }> = {
@@ -26,12 +27,12 @@ export default function MovieLibraryHome({ locale }: { locale: Locale }) {
 
   return <div className={styles.page} dir={rtl?"rtl":"ltr"}>
     <header className={styles.nav}>
-      <a href={`/${locale}/`} className={styles.brand}><img src="/cineyah-logo.png" alt="Cineyah — سينياه"/></a>
+      <a href={sitePath(`/${locale}/`)} className={styles.brand}><img src={sitePath("/cineyah-logo.png")} alt="Cineyah — سينياه"/></a>
       <nav className={styles.desktopTabs} aria-label={rtl?"نوع المحتوى":"Content type"}>
         <button className={contentType==="movie"?styles.activeTab:""} onClick={()=>{setContentType("movie");setQuery("");setGenre(null)}}>{rtl?"أفلام":"Movies"}</button>
         <button className={contentType==="series"?styles.activeTab:""} onClick={()=>{setContentType("series");setQuery("");setGenre(null)}}>{rtl?"مسلسلات":"Series"}</button>
       </nav>
-      <a className={styles.lang} href={locale==="ar"?"/en/":"/ar/"}><Globe2/>{locale==="ar"?"EN":"العربية"}</a>
+      <a className={styles.lang} href={sitePath(locale==="ar"?"/en/":"/ar/")}><Globe2/>{locale==="ar"?"EN":"العربية"}</a>
     </header>
 
     <main className={styles.main}>
@@ -40,7 +41,7 @@ export default function MovieLibraryHome({ locale }: { locale: Locale }) {
         <button role="tab" aria-selected={contentType==="series"} className={contentType==="series"?styles.activeTab:""} onClick={()=>{setContentType("series");setQuery("");setGenre(null)}}>{rtl?"مسلسلات":"Series"}</button>
       </div>
 
-      {contentType==="movie"&&hero&&<section className={styles.hero} style={{backgroundImage:`linear-gradient(90deg,rgba(5,8,17,.96),rgba(5,8,17,.52),rgba(5,8,17,.85)),url('${hero.backdrop??hero.poster}')`}}>
+      {contentType==="movie"&&hero&&<section className={styles.hero} style={{backgroundImage:`linear-gradient(90deg,rgba(5,8,17,.96),rgba(5,8,17,.52),rgba(5,8,17,.85)),url('${sitePath(hero.backdrop??hero.poster)}')`}}>
         <div className={styles.heroCopy}>
           <span>{rtl?"مكتبة سينياه القانونية":"CINEYAH LEGAL LIBRARY"}</span>
           <h1>{movieTitle(hero,locale)}</h1>
@@ -48,8 +49,8 @@ export default function MovieLibraryHome({ locale }: { locale: Locale }) {
           <div className={styles.heroMeta}><b>{hero.year}</b><b>{formatDuration(hero.runtimeMinutes,locale)}</b><b>{rtl?hero.languageAr:hero.languageEn}</b></div>
           <p>{rtl?hero.descriptionAr:hero.descriptionEn}</p>
           <div className={styles.heroActions}>
-            <a className={styles.primary} href={`/${locale}/movies/${hero.id}/`}>{hero.sources.length?<Play fill="currentColor"/>:<Info/>}{hero.sources.length?(rtl?"شاهد صفحة الفيلم":"Open movie page"):(rtl?"التفاصيل":"Details")}</a>
-            <a className={styles.secondary} href={`/${locale}/movies/${hero.id}/`}><Info/>{rtl?"معلومات الفيلم":"Movie details"}</a>
+            <a className={styles.primary} href={sitePath(`/${locale}/movies/${hero.id}/`)}>{hero.sources.length?<Play fill="currentColor"/>:<Info/>}{hero.sources.length?(rtl?"شاهد صفحة الفيلم":"Open movie page"):(rtl?"التفاصيل":"Details")}</a>
+            <a className={styles.secondary} href={sitePath(`/${locale}/movies/${hero.id}/`)}><Info/>{rtl?"معلومات الفيلم":"Movie details"}</a>
           </div>
         </div>
       </section>}
@@ -71,8 +72,8 @@ export default function MovieLibraryHome({ locale }: { locale: Locale }) {
         </details>
 
         <section className={styles.grid} aria-label={rtl?"الأفلام":"Movies"}>
-          {movies.map(movie=><a className={styles.card} key={movie.id} href={`/${locale}/movies/${movie.id}/`}>
-            <div className={styles.poster}><img src={movie.poster} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`} loading="lazy"/><span data-playable={movie.sources.length?"yes":"no"}>{movie.sources.length?(rtl?"متاح للمشاهدة":"Playable"):(rtl?"معلومات فقط":"Info only")}</span><div className={styles.cardAction}>{movie.sources.length?<Play fill="currentColor"/>:<Info/>}</div></div>
+          {movies.map(movie=><a className={styles.card} key={movie.id} href={sitePath(`/${locale}/movies/${movie.id}/`)}>
+            <div className={styles.poster}><img src={sitePath(movie.poster)} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`} loading="lazy"/><span data-playable={movie.sources.length?"yes":"no"}>{movie.sources.length?(rtl?"متاح للمشاهدة":"Playable"):(rtl?"معلومات فقط":"Info only")}</span><div className={styles.cardAction}>{movie.sources.length?<Play fill="currentColor"/>:<Info/>}</div></div>
             <div className={styles.copy}><h2>{movieTitle(movie,locale)}</h2>{movie.titleOriginal&&movie.titleOriginal!==movieTitle(movie,locale)&&<p className={styles.alt}>{movie.titleOriginal}</p>}<p>{movie.year} · {formatDuration(movie.runtimeMinutes,locale)}</p></div>
           </a>)}
         </section>
