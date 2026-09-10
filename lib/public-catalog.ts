@@ -2,12 +2,18 @@ import { movieCatalog, type Movie } from "@/lib/catalog";
 import { curatedFreeMovies } from "@/lib/free-movies";
 import { generatedFreeMovies } from "@/lib/generated-free-movies";
 
-// A movie is never public merely because metadata or a URL exists.
-// Add an id here only after Cineyah has verified real playback with the exact source.
+const pipelineVerifiedIds = movieCatalog
+  .filter(movie => movie.sources.length > 0)
+  .filter(movie => movie.rightsStatusEn === "Playback and commercial-use source verified by Cineyah pipeline.")
+  .filter(movie => ["CC BY 2.0","CC BY 2.5","CC BY 3.0","CC BY 4.0","CC BY-SA 2.0","CC BY-SA 2.5","CC BY-SA 3.0","CC BY-SA 4.0","CC0 1.0"].includes(movie.licenseName ?? ""))
+  .map(movie => movie.id);
+
+// A title is public only after exact-source playback checks. Curated ids are reviewed
+// manually; pipeline ids are produced only after license, fiction, duration, codec,
+// audio and byte-range checks succeed.
 const verifiedPlayableMovieIds = new Set<string>([
   "pendatang-2023",
-  // GENERATED VERIFIED START
-  // GENERATED VERIFIED END
+  ...pipelineVerifiedIds,
 ]);
 
 function isRealArtwork(value?: string) {
@@ -22,7 +28,8 @@ function isRealArtwork(value?: string) {
 const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies, ...generatedFreeMovies];
 
 export function isPublicMovie(movie: Movie) {
-  return movie.runtimeMinutes >= 60
+  return movie.year >= 2000
+    && movie.runtimeMinutes >= 60
     && verifiedPlayableMovieIds.has(movie.id)
     && movie.sources.length > 0
     && isRealArtwork(movie.poster)
