@@ -82,9 +82,7 @@ def range_test(url):
 
 
 def decode_test(url):
-    # This is an actual media decode, not only a HEAD/metadata check. It seeks into
-    # the remote file and decodes several seconds, exercising HTTP range/seek,
-    # container parsing, H.264 video and the audio codec.
+    # Actual decode test: seek into the remote MP4 and decode video/audio frames.
     p = subprocess.run(
         [
             "ffmpeg", "-hide_banner", "-loglevel", "error",
@@ -102,8 +100,6 @@ def decode_test(url):
 
 def candidate_score(name, info, size):
     lname = name.lower()
-    # Prefer generated web renditions over camera-master files. They are normally
-    # much quicker to start on mobile while retaining acceptable picture quality.
     web_derivative = any(token in lname for token in ("512kb", "h.264", "h264", "720", "480"))
     height = info.get("height", 0)
     useful_height = min(height, 1080)
@@ -113,15 +109,19 @@ def candidate_score(name, info, size):
 
 def extract_backdrop(url):
     BACKDROP.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "ffmpeg", "-y", "-v", "error",
-        "-ss", "600", "-i", url,
-        "-frames:v", "1", "-vf", "scale=1600:-2",
-        "-q:v", "3", str(BACKDROP),
-    ]
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+    # Use a real frame from the feature itself, not the poster. 10 minutes in avoids title cards.
+    p = subprocess.run(
+        [
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+            "-rw_timeout", "20000000", "-ss", "600", "-i", url,
+            "-frames:v", "1", "-vf", "scale=1600:-2", "-q:v", "3", str(BACKDROP),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
     if p.returncode or not BACKDROP.exists() or BACKDROP.stat().st_size < 20000:
-        raise SystemExit("Could not extract a real movie-frame backdrop: " + (p.stderr or "unknown ffmpeg error")[-1200:])
+        raise RuntimeError("could not extract real backdrop: " + (p.stderr or "unknown ffmpeg error")[-1200:])
     return "/backdrops/ulises-2012.jpg"
 
 
@@ -157,15 +157,16 @@ for _, name, url, runtime, size, info in candidates:
     try:
         http_result = range_test(url)
         decode_result = decode_test(url)
-        selected = (name, url, runtime, size, info, http_result, decode_result)
+        backdrop_url = extract_backdrop(url)
+        selected = (name, url, runtime, size, info, http_result, decode_result, backdrop_url)
         break
     except Exception as exc:
         errors.append({"file": name, "error": str(exc)[:900]})
 
 if not selected:
-    raise SystemExit("All compatible Ulises renditions failed real range/decode tests: " + json.dumps(errors, ensure_ascii=False))
+    raise SystemExit("All compatible Ulises renditions failed real range/decode/backdrop tests: " + json.dumps(errors, ensure_ascii=False))
 
-name, url, secs, size, info, http_result, decode_result = selected
+name, url, secs, size, info, http_result, decode_result, backdrop_url = selected
 h = info["height"]
 label = "1080p" if h >= 1000 else "720p" if h >= 650 else "480p" if h >= 430 else "360p"
 
@@ -178,7 +179,6 @@ end = text.find("sourceUrl:", start)
 if end < 0:
     raise SystemExit("Ulises sourceUrl boundary not found in catalog")
 segment = text[start:end]
-# Insert or refresh the cinematic backdrop in the movie record.
 if 'backdrop:' in segment:
     segment = re.sub(r'backdrop:"[^"]*"', f'backdrop:"{backdrop_url}"', segment, count=1)
 else:
