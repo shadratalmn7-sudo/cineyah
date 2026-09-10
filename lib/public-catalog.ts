@@ -4,7 +4,9 @@ import { movieCatalog, type Movie } from "@/lib/catalog";
 // Add an id here only after Cineyah has verified real playback on supported
 // desktop browsers and iPhone/Safari with the exact published source.
 const verifiedPlayableMovieIds = new Set<string>([
-  // Intentionally empty until a title passes real playback QA.
+  "pendatang-2023",
+  // GENERATED VERIFIED START
+  // GENERATED VERIFIED END
 ]);
 
 function isRealArtwork(value?: string) {
@@ -17,7 +19,7 @@ function isRealArtwork(value?: string) {
 }
 
 export function isPublicMovie(movie: Movie) {
-  return movie.runtimeMinutes >= 90
+  return movie.runtimeMinutes >= 60
     && verifiedPlayableMovieIds.has(movie.id)
     && movie.sources.length > 0
     && isRealArtwork(movie.poster)
