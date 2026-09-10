@@ -1,0 +1,32 @@
+name: Roll back provisional comedy exposure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rollback-unverified-comedy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Remove provisional batch from catalog exports
+        run: python scripts/rollback-unverified-comedy-main.py
+      - name: Commit safe catalog state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/catalog.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: keep provisional comedy batch unpublished"
+          git push origin HEAD:main
