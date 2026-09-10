@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, Globe2, Play, Search } from "lucide-react";
-import { formatDuration, movieTitle, playableMovies, type ContentType, type Genre, type Locale } from "@/lib/catalog";
+import { formatDuration, movieTitle, type ContentType, type Genre, type Locale } from "@/lib/catalog";
+import { playableMovies } from "@/lib/public-catalog";
 import { sitePath } from "@/lib/site-path";
 import styles from "./movie-library-home.module.css";
 
@@ -41,14 +42,14 @@ export default function MovieLibraryHome({locale}:{locale:Locale}){
         <button role="tab" aria-selected={contentType==="series"} className={contentType==="series"?styles.activeTab:""} onClick={()=>{setContentType("series");setQuery("");setGenre(null)}}>{rtl?"مسلسلات":"Series"}</button>
       </div>
 
-      {contentType==="movie"&&hero&&<section className={styles.hero} style={{backgroundImage:`linear-gradient(90deg,rgba(5,8,17,.96),rgba(5,8,17,.52),rgba(5,8,17,.85)),url('${sitePath(hero.backdrop??hero.poster)}')`}}>
+      {contentType==="movie"&&hero&&<section className={styles.hero} style={{backgroundImage:`linear-gradient(90deg,rgba(5,8,17,.96),rgba(5,8,17,.52),rgba(5,8,17,.85)),url('${sitePath(hero.backdrop!)}')`}}>
         <div className={styles.heroCopy}>
           <span>CINEYAH</span>
           <h1>{movieTitle(hero,locale)}</h1>
           {hero.titleOriginal&&hero.titleOriginal!==movieTitle(hero,locale)&&<p className={styles.original}>{hero.titleOriginal}</p>}
           <div className={styles.heroMeta}><b>{hero.year}</b><b>{formatDuration(hero.runtimeMinutes,locale)}</b><b>{rtl?hero.languageAr:hero.languageEn}</b></div>
           <p>{rtl?hero.descriptionAr:hero.descriptionEn}</p>
-          <div className={styles.heroActions}><a className={styles.primary} href={sitePath(`/${locale}/movies/${hero.id}/`)}><Play fill="currentColor"/>{rtl?"افتح الفيلم":"Open movie"}</a></div>
+          <div className={styles.heroActions}><a className={styles.primary} href={sitePath(`/${locale}/movies/${hero.id}/`)}><Play fill="currentColor"/>{rtl?"شاهد الآن":"Watch now"}</a></div>
         </div>
       </section>}
 
@@ -74,7 +75,7 @@ export default function MovieLibraryHome({locale}:{locale:Locale}){
             <div className={styles.copy}><h2>{movieTitle(movie,locale)}</h2>{movie.titleOriginal&&movie.titleOriginal!==movieTitle(movie,locale)&&<p className={styles.alt}>{movie.titleOriginal}</p>}<p>{movie.year} · {formatDuration(movie.runtimeMinutes,locale)}</p></div>
           </a>)}
         </section>
-        {movies.length===0&&<p className={styles.empty}>{rtl?"لا توجد أفلام متاحة للمشاهدة في هذا القسم حاليًا.":"No playable movies are available in this section yet."}</p>}
+        {movies.length===0&&<p className={styles.empty}>{rtl?"لا توجد أفلام جاهزة للمشاهدة حاليًا.":"No movies are ready to watch right now."}</p>}
       </>}
     </main>
   </div>;
