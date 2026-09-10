@@ -23,6 +23,7 @@ Scheduled checks should probe video sources, subtitle files, images, metadata en
 ## Current implementation status
 
 - Hard 90-minute public filtering, direct-source filtering, localized duration formatting, and public genre filtering are implemented in the application.
-- The current catalog is static in source control: one public record, zero series, and two documented review candidates.
-- Scheduled discovery, persistent review storage, automated probing, sitemap regeneration, and health checks are specified but **not yet running**.
+- The current catalog is static in source control: one public record, zero series, and three documented review candidates.
+- Scheduled discovery is implemented in `.github/workflows/discover-films.yml` and has executed on GitHub. Consult WORK_STATUS for the latest run outcome. It produces a review artifact; it does not publish movies.
+- Sitemaps are generated from the typed public catalog. Persistent review storage, automated media/rights probing, publication and health checks are **not implemented**.
 - Advertising automation is not configured. It cannot be implemented or verified until the owner authenticates and provides usable network zones; no paid service is enabled.

@@ -6,7 +6,7 @@ Live environment: https://cineyah.shadrat-almn7.chatgpt.site
 
 GitHub source of truth: https://github.com/shadratalmn7-sudo/cineyah
 
-Last verified deployment: version 6 from local Sites commit `f63e423ca584dd3e2fd5016c415dbcdf5737e821` (succeeded on 2026-09-10).
+Prior verified deployment: version 6 from local Sites commit `f63e423ca584dd3e2fd5016c415dbcdf5737e821` (succeeded on 2026-09-10).
 
 Last verified code commit before the GitHub handoff documentation: `f63e423ca584dd3e2fd5016c415dbcdf5737e821`. The final GitHub handoff SHA is reported in the completion message and can be read with `git rev-parse HEAD` after cloning.
 
@@ -51,7 +51,7 @@ Last verified code commit before the GitHub handoff documentation: `f63e423ca584
 - Legal Arabic subtitles for the current public film.
 - Persistent database-backed ingestion, admin actions, Needs Review, reports, analytics, and health checks.
 - Automated discovery, source/license rechecks, subtitle probes, deduplication, and sitemap regeneration.
-- Dedicated detail/watch URLs, localized SEO metadata, structured data, and production sitemaps.
+- Dedicated watch URLs and production verification of generated SEO/sitemap endpoints. Detail URLs, metadata and Movie structured data are now implemented.
 - HilltopAds VAST, external 30-minute cooldown ad, download-ad completion gate, AdBlock differentiation, and official revenue data.
 - End-to-end cross-browser and mobile playback verification.
 
@@ -62,10 +62,10 @@ Last verified code commit before the GitHub handoff documentation: `f63e423ca584
 - Series: UI/data scaffold only; 0 public series and 0 episodes.
 - Player: native Cineyah player is built; the direct source responds, but the cloud-browser decoder did not complete playback and showed the retry state.
 - Subtitles: Arabic/English/Off UI is built; no legally licensed track is attached to the current film.
-- SEO: bilingual locale routes and localized UI exist; dedicated title/watch routes, canonical/hreflang, structured data, and generated sitemaps are incomplete.
+- SEO: bilingual title routes, canonical/hreflang, Movie structured data and generated sitemap/robots implemented. Live HTTP verification is still outstanding.
 - Ads: not connected; no VAST, external cooldown ad, download ad gate, or revenue API.
 - Admin: not implemented as a secured end-to-end dashboard.
-- Automated ingestion: policy and pipeline are documented only; no scheduled persistent importer is running.
+- Automated ingestion: scheduled candidate discovery implemented; rights/probe/publication pipeline and persistent importer remain incomplete.
 
 ## Important constraints
 
@@ -93,3 +93,10 @@ Last verified code commit before the GitHub handoff documentation: `f63e423ca584
 Version 7 deployed successfully on 2026-09-10 from Sites commit `609dd2b2ef8d25b7f510c3ba90cb1b8f136aea34`, matching GitHub code commit `3af040758949c881f5e841c6362e2e6588fd791f`. The site is live at the URL above. Direct live HTTP validation was unavailable from this runtime.
 
 GitHub discovery run `34492002323` executed, but the search response did not contain `response`. The first query's leading wildcard license clauses were replaced with explicit quoted license URLs and error reporting improved. Re-run result must be checked; not yet a successful discovery run.
+
+### Latest checked state
+
+- Corrected GitHub discovery run: https://github.com/shadratalmn7-sudo/cineyah/actions/runs/34492224567 — started successfully and still in progress at the final documentation check. Do not treat its 1,000-candidate setting as a completed result.
+- GitHub preservation and source tree equality verified. Last verified code/automation commit before final documentation: `b3a0185f18738e6e969eb48e140326b6ba46fac7`.
+- English preview tested: document language `en`, direction `ltr`, duration `1h 37m`; Arabic remains `1 ساعة و37 دقيقة`. Cases 90, 120 and 142 minutes and unique catalog identifiers passed direct checks.
+- The public catalog remains one movie without licensed subtitles, and cloud-browser playback returned the source error state. No additional film was published.

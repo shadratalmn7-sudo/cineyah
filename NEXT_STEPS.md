@@ -35,3 +35,5 @@ GitHub import is finished; do not recreate the repository. Start with latest mai
 3. Add the missing rights/probe/synopsis/import stages. Discovery only is implemented. Never automate rights approval from Internet Archive license metadata alone.
 4. Diagnose Ulises playback: current cloud browser reaches retry/error, not confirmed playback. Investigate source headers/codecs and actual device behavior.
 5. Verify sitemap/robots on production, then continue toward at least 1,000 distinct films. Do not inflate genre overlap into distinct movie count.
+
+First action next session: inspect run `34492224567` and its `film-discovery-report` artifact. It was still in progress at final documentation time. Start from GitHub main; all 121 tracked files are preserved.
