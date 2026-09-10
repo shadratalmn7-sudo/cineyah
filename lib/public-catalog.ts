@@ -1,8 +1,8 @@
 import { movieCatalog, type Movie } from "@/lib/catalog";
+import { curatedFreeMovies } from "@/lib/free-movies";
 
 // A movie is never public merely because metadata or a URL exists.
-// Add an id here only after Cineyah has verified real playback on supported
-// desktop browsers and iPhone/Safari with the exact published source.
+// Add an id here only after Cineyah has verified real playback with the exact source.
 const verifiedPlayableMovieIds = new Set<string>([
   "pendatang-2023",
   // GENERATED VERIFIED START
@@ -18,6 +18,8 @@ function isRealArtwork(value?: string) {
   return asset.startsWith("/") || asset.startsWith("https://") || asset.startsWith("http://");
 }
 
+const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies];
+
 export function isPublicMovie(movie: Movie) {
   return movie.runtimeMinutes >= 60
     && verifiedPlayableMovieIds.has(movie.id)
@@ -26,7 +28,7 @@ export function isPublicMovie(movie: Movie) {
     && isRealArtwork(movie.backdrop);
 }
 
-export const publicMovies = movieCatalog.filter(isPublicMovie);
+export const publicMovies = allMovies.filter(isPublicMovie);
 export const playableMovies = publicMovies;
 export const discoverableMovies = publicMovies;
 
@@ -50,10 +52,10 @@ export function getSimilarMovies(movie: Movie, limit = 6) {
 }
 
 export function getYouMayAlsoLike(movie: Movie, limit = 6) {
-  const similarIds = new Set(getSimilarMovies(movie, limit).map(item => item.id));
-  const pool = publicMovies.filter(candidate => candidate.id !== movie.id && !similarIds.has(candidate.id));
-  const seed = [...movie.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const similarIds=new Set(getSimilarMovies(movie,limit).map(item=>item.id));
+  const pool=publicMovies.filter(candidate=>candidate.id!==movie.id&&!similarIds.has(candidate.id));
+  const seed=[...movie.id].reduce((sum,char)=>sum+char.charCodeAt(0),0);
   return [...pool]
-    .sort((a, b) => ((a.year + seed) % 97) - ((b.year + seed) % 97) || a.titleEn.localeCompare(b.titleEn))
-    .slice(0, limit);
+    .sort((a,b)=>((a.year+seed)%97)-((b.year+seed)%97)||a.titleEn.localeCompare(b.titleEn))
+    .slice(0,limit);
 }
