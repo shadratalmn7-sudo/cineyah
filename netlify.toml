@@ -1,0 +1,10 @@
+[build]
+  command = "pnpm exec next build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22.13.0"
+  PNPM_VERSION = "11.19.0"
+  STATIC_EXPORT = "true"
+  NEXT_PUBLIC_SITE_BASE_PATH = ""
+  NEXT_PUBLIC_SITE_ORIGIN = "https://cineyah-movies.netlify.app"
