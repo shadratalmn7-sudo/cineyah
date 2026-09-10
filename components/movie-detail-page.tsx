@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Expand, Pause, Play, Volume2, X } from "lucide-react";
+import { ArrowLeft, Expand, ExternalLink, Pause, Play, Volume2, X } from "lucide-react";
 import type { Locale, Movie } from "@/lib/catalog";
 import { formatDuration } from "@/lib/catalog";
 import styles from "./movie-detail-page.module.css";
@@ -13,16 +13,13 @@ function formatClock(seconds:number){
 }
 
 function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onClose:()=>void}){
+  const source=movie.sources[0];
   const videoRef=useRef<HTMLVideoElement>(null);
-  const previewRef=useRef<HTMLVideoElement>(null);
-  const seekRef=useRef<HTMLDivElement>(null);
   const [playing,setPlaying]=useState(false);
   const [time,setTime]=useState(0);
   const [duration,setDuration]=useState(movie.runtimeMinutes*60);
   const [volume,setVolume]=useState(1);
   const [mediaError,setMediaError]=useState(false);
-  const [preview,setPreview]=useState<{time:number;left:number}|null>(null);
-  const source=movie.sources[0];
 
   useEffect(()=>{
     const video=videoRef.current;
@@ -31,41 +28,36 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
     if(saved>15&&saved<movie.runtimeMinutes*60-60)video.currentTime=saved;
   },[movie.id,movie.runtimeMinutes]);
 
-  useEffect(()=>{
-    if(!preview||!previewRef.current)return;
-    const p=previewRef.current;
-    const next=Math.max(0,Math.min(preview.time,Math.max(0,duration-0.5)));
-    if(Math.abs(p.currentTime-next)>.6){
-      try{p.currentTime=next}catch{}
-    }
-  },[preview,duration]);
+  if(!source)return null;
 
   const toggle=()=>{
-    const v=videoRef.current;
-    if(!v)return;
-    if(v.paused){void v.play().catch(()=>setMediaError(true));}else v.pause();
-  };
-
-  const pointerPreview=(clientX:number)=>{
-    const box=seekRef.current?.getBoundingClientRect();
-    if(!box||!duration)return;
-    const ratio=Math.max(0,Math.min(1,(clientX-box.left)/box.width));
-    setPreview({time:ratio*duration,left:ratio*100});
+    const video=videoRef.current;
+    if(!video)return;
+    if(video.paused) void video.play().catch(()=>setMediaError(true));
+    else video.pause();
   };
 
   return <div className={styles.playerOverlay} role="dialog" aria-modal="true">
     <button className={styles.closePlayer} onClick={onClose} aria-label={locale==="ar"?"إغلاق":"Close"}><X/></button>
     <div className={styles.playerShell}>
-      <video ref={videoRef} className={styles.video} src={source.url} poster={movie.backdrop??movie.poster} preload="metadata" playsInline onClick={toggle}
+      <video
+        ref={videoRef}
+        className={styles.video}
+        src={source.url}
+        poster={movie.backdrop??movie.poster}
+        preload="metadata"
+        playsInline
+        onClick={toggle}
         onLoadedMetadata={e=>setDuration(e.currentTarget.duration||movie.runtimeMinutes*60)}
         onTimeUpdate={e=>{setTime(e.currentTarget.currentTime);localStorage.setItem(`cineyah:progress:${movie.id}`,String(e.currentTarget.currentTime))}}
-        onPlay={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onError={()=>setMediaError(true)} />
-      <video ref={previewRef} className={styles.previewVideoSource} src={source.url} muted playsInline preload="metadata" aria-hidden="true" />
-      {mediaError&&<div className={styles.playerError}><strong>{locale==="ar"?"تعذر تشغيل هذا المصدر":"This source could not be played"}</strong><p>{locale==="ar"?"تعذر تحميل ملف الفيلم من المصدر الحالي. لن نعتمد هذا المصدر إذا استمر بالفشل.":"The current movie source could not be loaded. It will not be treated as ready if it keeps failing."}</p><button onClick={()=>{setMediaError(false);videoRef.current?.load()}}>{locale==="ar"?"إعادة المحاولة":"Retry"}</button></div>}
+        onPlay={()=>setPlaying(true)}
+        onPause={()=>setPlaying(false)}
+        onError={()=>setMediaError(true)}
+      />
+      {mediaError&&<div className={styles.playerError}><strong>{locale==="ar"?"تعذر تشغيل هذا المصدر":"This source could not be played"}</strong><p>{locale==="ar"?"تعذر تحميل ملف الفيلم من المصدر المرخّص الحالي.":"The currently licensed source could not be loaded."}</p><button onClick={()=>{setMediaError(false);videoRef.current?.load()}}>{locale==="ar"?"إعادة المحاولة":"Retry"}</button></div>}
       <div className={styles.playerBrand}><b>CINEYAH</b><span>{movie.titleEn}</span></div>
       <div className={styles.controls}>
-        <div ref={seekRef} className={styles.seekWrap} onPointerMove={e=>pointerPreview(e.clientX)} onPointerLeave={()=>setPreview(null)}>
-          {preview&&<div className={styles.previewBubble} style={{left:`${preview.left}%`}}><video src={source.url} muted playsInline preload="metadata" ref={el=>{if(el&&Math.abs(el.currentTime-preview.time)>.7){try{el.currentTime=preview.time}catch{}}}}/><span>{formatClock(preview.time)}</span></div>}
+        <div className={styles.seekWrap}>
           <input className={styles.seek} type="range" min="0" max={duration||1} value={Math.min(time,duration||1)} onChange={e=>{const t=Number(e.target.value);setTime(t);if(videoRef.current)videoRef.current.currentTime=t}} aria-label={locale==="ar"?"التقدم":"Progress"}/>
         </div>
         <div className={styles.controlRow}>
@@ -84,10 +76,11 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
 export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Locale}){
   const rtl=locale==="ar";
   const [watching,setWatching]=useState(false);
-  const title=locale==="ar"?movie.titleAr:movie.titleEn;
-  const description=locale==="ar"?movie.descriptionAr:movie.descriptionEn;
+  const title=rtl?movie.titleAr:movie.titleEn;
+  const description=rtl?movie.descriptionAr:movie.descriptionEn;
   const background=movie.backdrop??movie.poster;
   const genreText=useMemo(()=>movie.genres.join(" · "),[movie.genres]);
+  const playable=movie.sources.length>0;
 
   useEffect(()=>{
     if(!watching)return;
@@ -98,9 +91,9 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
 
   return <div className={styles.page} dir={rtl?"rtl":"ltr"}>
     <header className={styles.header}>
-      <a href={`/${locale}/`} className={styles.back}><ArrowLeft/>{locale==="ar"?"الأفلام":"Movies"}</a>
+      <a href={`/${locale}/`} className={styles.back}><ArrowLeft/>{rtl?"الأفلام":"Movies"}</a>
       <a href={`/${locale}/`} className={styles.brand}><img src="/cineyah-logo.png" alt="Cineyah — سينياه"/></a>
-      <a href={locale==="ar"?`/en/movies/${movie.id}/`:`/ar/movies/${movie.id}/`} className={styles.lang}>{locale==="ar"?"EN":"العربية"}</a>
+      <a href={rtl?`/en/movies/${movie.id}/`:`/ar/movies/${movie.id}/`} className={styles.lang}>{rtl?"EN":"العربية"}</a>
     </header>
 
     <main>
@@ -108,23 +101,32 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
         <div className={styles.heroInner}>
           <img className={styles.poster} src={movie.poster} alt={`${movie.titleEn} — ${movie.titleAr}`}/>
           <div className={styles.copy}>
-            <span className={styles.kicker}>{locale==="ar"?"فيلم":"MOVIE"}</span>
+            <span className={styles.kicker}>{rtl?"فيلم":"MOVIE"}</span>
             <h1>{title}</h1>
-            {locale==="ar"?<p className={styles.altTitle}>{movie.titleEn}</p>:<p className={styles.altTitle} dir="rtl">{movie.titleAr}</p>}
-            <div className={styles.meta}><b>{movie.year}</b><b>{formatDuration(movie.runtimeMinutes,locale)}</b><b>{genreText}</b><b>{locale==="ar"?movie.languageAr:movie.languageEn}</b></div>
+            {rtl?<p className={styles.altTitle}>{movie.titleEn}</p>:<p className={styles.altTitle} dir="rtl">{movie.titleAr}</p>}
+            <div className={styles.meta}><b>{movie.year}</b><b>{formatDuration(movie.runtimeMinutes,locale)}</b><b>{genreText}</b><b>{rtl?movie.languageAr:movie.languageEn}</b></div>
             <p className={styles.description}>{description}</p>
-            <button className={styles.watch} onClick={()=>setWatching(true)}><Play fill="currentColor"/>{locale==="ar"?"شاهد الآن":"Watch now"}</button>
+
+            {playable ? <button className={styles.watch} onClick={()=>setWatching(true)}><Play fill="currentColor"/>{rtl?"شاهد الآن":"Watch now"}</button> : null}
+
+            {!playable && movie.legalLinks?.map(link => <a key={link.url} className={styles.watch} href={link.url} target="_blank" rel="noreferrer"><ExternalLink/>{rtl?link.labelAr:link.labelEn}</a>)}
           </div>
         </div>
       </section>
 
       <section className={styles.info}>
-        <div><span>{locale==="ar"?"الجودة":"Quality"}</span><b>{movie.sources.map(s=>s.label).join(" · ")}</b></div>
-        <div><span>{locale==="ar"?"المدة":"Runtime"}</span><b>{formatDuration(movie.runtimeMinutes,locale)}</b></div>
-        <div><span>{locale==="ar"?"اللغة":"Language"}</span><b>{locale==="ar"?movie.languageAr:movie.languageEn}</b></div>
+        <div><span>{rtl?"التوفر":"Availability"}</span><b>{playable?(rtl?"متاح داخل سينياه بمصدر مرخّص":"Licensed playback available on Cineyah"):(rtl?"لا نستضيف نسخة من هذا الفيلم":"Cineyah does not host this movie")}</b></div>
+        <div><span>{rtl?"المدة":"Runtime"}</span><b>{formatDuration(movie.runtimeMinutes,locale)}</b></div>
+        <div><span>{rtl?"اللغة":"Language"}</span><b>{rtl?movie.languageAr:movie.languageEn}</b></div>
       </section>
+
+      {playable && movie.downloadAllowed && <section className={styles.info}>
+        <div><span>{rtl?"التحميل":"Download"}</span><b><a href={movie.sources[0].url}>{rtl?"تحميل من المصدر المرخّص":"Download from licensed source"}</a></b></div>
+        <div><span>{rtl?"الترخيص":"License"}</span><b>{movie.licenseName??(rtl?"مرخّص":"Licensed")}</b></div>
+        <div><span>{rtl?"المصدر":"Source"}</span><b><a href={movie.sourceUrl} target="_blank" rel="noreferrer">{rtl?"عرض المصدر":"View source"}</a></b></div>
+      </section>}
     </main>
 
-    {watching&&<NativeMoviePlayer movie={movie} locale={locale} onClose={()=>setWatching(false)}/>} 
+    {watching&&playable&&<NativeMoviePlayer movie={movie} locale={locale} onClose={()=>setWatching(false)}/>} 
   </div>;
 }
