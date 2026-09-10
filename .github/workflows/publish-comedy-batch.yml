@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: comedy-100-batch
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-comedy-catalog:
