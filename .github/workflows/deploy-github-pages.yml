@@ -54,11 +54,10 @@ jobs:
           test -f out/index.html
           test -f out/ar/index.html
           test -f out/en/index.html
-          test -f out/ar/movies/ulises-2012/index.html
-          test -f out/en/movies/ulises-2012/index.html
           grep -R -q '/cineyah/_next/' out/ar/index.html
-          grep -R -q '/cineyah/ar/movies/' out/ar/index.html
           grep -R -q '/cineyah/cineyah-logo.png' out/ar/index.html
+          if grep -q '/cineyah/ar/movies/' out/ar/index.html; then test -d out/ar/movies; fi
+          if grep -q '/cineyah/en/movies/' out/en/index.html; then test -d out/en/movies; fi
       - name: Upload GitHub Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4

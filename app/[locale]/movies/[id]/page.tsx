@@ -7,9 +7,13 @@ import { sitePath } from "@/lib/site-path";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah-movies.netlify.app";
+const EMPTY_PUBLIC_MOVIE_ID = "__cineyah_no_public_movies__";
+
+export const dynamicParams = false;
 
 export function generateStaticParams(){
-  return ["ar","en"].flatMap(locale=>publicMovies.map(movie=>({locale,id:movie.id})));
+  const params=["ar","en"].flatMap(locale=>publicMovies.map(movie=>({locale,id:movie.id})));
+  return params.length ? params : ["ar","en"].map(locale=>({locale,id:EMPTY_PUBLIC_MOVIE_ID}));
 }
 
 export async function generateMetadata({params}:Props):Promise<Metadata>{

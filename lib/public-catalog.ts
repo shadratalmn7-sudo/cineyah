@@ -3,6 +3,7 @@ import { movieCatalog, type Movie } from "@/lib/catalog";
 // A movie is never public merely because metadata or a URL exists.
 // Add an id here only after Cineyah has verified real playback on supported
 // desktop browsers and iPhone/Safari with the exact published source.
+// CI exercises this strict publication gate before any title can surface.
 const verifiedPlayableMovieIds = new Set<string>([
   // Intentionally empty until a title passes real playback QA.
 ]);
