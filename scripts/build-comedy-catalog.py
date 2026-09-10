@@ -25,7 +25,13 @@ LICENSES = [
     "https://creativecommons.org/licenses/by-sa/4.0/",
     "https://creativecommons.org/publicdomain/zero/1.0/",
 ]
-BAD_TERMS = {"trailer","teaser","clip","short film","shorts","episode","tv episode","porn","erotic","xxx","adult","compilation","collection of"}
+BAD_TERMS = {
+    "trailer","teaser","clip","short film","shorts","episode","episodes","tv episode",
+    "porn","erotic","xxx","adult","compilation","collection","boxset","box set","franchise",
+    "duology","trilogy","marathon","gameplay","walkthrough","commercials","commercial break",
+    "podcast","radio show","news","festival","performance","concert","improv","showcase",
+    "vhs recording","woc recording","greatest hits","complete series","season ","series one","series two"
+}
 
 
 def fetch_json(url, timeout=25):
@@ -80,6 +86,12 @@ def ffprobe_ok(url):
         return False
 
 
+def normalized_title(title):
+    title = re.sub(r"\[[^\]]*\]|\([^)]*(?:rip|dub|sub|1080|720|vhs|dvd)[^)]*\)", " ", title, flags=re.I)
+    title = re.sub(r"\b(19\d{2}|20\d{2})\b", " ", title)
+    return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
+
+
 def inspect(identifier):
     safe = urllib.parse.quote(identifier, safe="")
     try:
@@ -89,17 +101,18 @@ def inspect(identifier):
         subjects = info.get("subject",[]); subjects = subjects if isinstance(subjects,list) else [subjects]
         haystack = " ".join([title,description,*[clean_text(x) for x in subjects]]).lower()
         if not title or any(term in haystack for term in BAD_TERMS): return None
+        if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*\d+)\b", title, re.I): return None
         if not any(term in haystack for term in ("comedy","comed","slapstick","farce","romantic comedy")): return None
         lic = clean_text(info.get("licenseurl"))
         if lic not in LICENSES: return None
-        files = [f for f in meta.get("files",[]) if str(f.get("name","")).lower().endswith(".mp4") and reported_seconds(f) >= 5400]
+        files = [f for f in meta.get("files",[]) if str(f.get("name","")).lower().endswith(".mp4") and 5400 <= reported_seconds(f) <= 12600]
         if not files: return None
         files.sort(key=source_rank, reverse=True)
         chosen = files[0]
         media_url = f"https://archive.org/download/{safe}/{urllib.parse.quote(chosen['name'], safe='/')}"
         if not ffprobe_ok(media_url): return None
         runtime = int(round(reported_seconds(chosen)/60))
-        if runtime < 90: return None
+        if not (90 <= runtime <= 210): return None
         year = parse_year(info)
         creator = clean_text(info.get("creator")) or "Internet Archive contributor"
         lang = clean_text(info.get("language")) or "Unknown"
@@ -137,21 +150,26 @@ def discover_ids():
 
 def main():
     ids=discover_ids(); print(json.dumps({"stage":"discovery","candidates":len(ids)}),flush=True)
-    found=[]
+    found=[]; seen=set()
     for start in range(0,len(ids),96):
         chunk=ids[start:start+96]
         with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
             for item in pool.map(inspect,chunk):
                 if item:
+                    key=normalized_title(item["titleEn"])
+                    if not key or key in seen: continue
+                    seen.add(key)
                     found.append(item); print(json.dumps({"verified":len(found),"title":item["titleEn"]}),flush=True)
         if len(found)>=TARGET: break
     if len(found)<TARGET:
         (ROOT/"work").mkdir(exist_ok=True)
         (ROOT/"work/comedy-batch-report.json").write_text(json.dumps({"target":TARGET,"verified":len(found),"candidates":len(ids)},indent=2)+"\n")
-        raise SystemExit(f"Only {len(found)} verified open-license comedy films found; need {TARGET}")
+        raise SystemExit(f"Only {len(found)} verified distinct comedy feature films found; need {TARGET}")
     published=found[:TARGET]
+    assert len({normalized_title(x["titleEn"]) for x in published}) == TARGET
+    assert all(90 <= x["runtimeMinutes"] <= 210 for x in published)
     (ROOT/"content/generated-comedy.json").write_text(json.dumps(published,ensure_ascii=False,indent=2)+"\n")
-    report={"target":TARGET,"verified":len(published),"generatedAt":dt.datetime.now(dt.timezone.utc).isoformat()}
+    report={"target":TARGET,"verified":len(published),"distinct":TARGET,"generatedAt":dt.datetime.now(dt.timezone.utc).isoformat()}
     (ROOT/"content/comedy-batch-report.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps(report),flush=True)
 
