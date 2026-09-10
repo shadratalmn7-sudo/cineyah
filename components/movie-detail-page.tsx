@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Download, ExternalLink, Play, X } from "lucide-react";
 import type { Locale, Movie } from "@/lib/catalog";
 import { formatDuration, getSimilarMovies, getYouMayAlsoLike, movieTitle } from "@/lib/catalog";
+import { sitePath } from "@/lib/site-path";
 import styles from "./movie-detail-page.module.css";
 
 const genreLabels = {
@@ -55,8 +56,8 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
           key={source.url}
           ref={videoRef}
           className={styles.video}
-          src={source.url}
-          poster={movie.backdrop??movie.poster}
+          src={sitePath(source.url)}
+          poster={sitePath(movie.backdrop??movie.poster)}
           preload="metadata"
           playsInline
           controls
@@ -71,7 +72,7 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
           onEnded={()=>localStorage.removeItem(`cineyah:progress:${movie.id}`)}
           onError={failSource}
         >
-          {movie.subtitles.map(track=><track key={`${track.lang}-${track.url}`} kind="subtitles" src={track.url} srcLang={track.lang} label={locale==="ar"?track.labelAr:track.labelEn} default={track.lang==="ar"}/>)}
+          {movie.subtitles.map(track=><track key={`${track.lang}-${track.url}`} kind="subtitles" src={sitePath(track.url)} srcLang={track.lang} label={locale==="ar"?track.labelAr:track.labelEn} default={track.lang==="ar"}/>) }
         </video>
         {loading&&!error&&<div className={styles.loading}>{locale==="ar"?"جارٍ تجهيز الفيديو…":"Preparing video…"}</div>}
         {error&&<div className={styles.playerError} role="alert"><strong>{locale==="ar"?"تعذر تشغيل المصدر":"Playback failed"}</strong><p>{error}</p><button onClick={()=>{setError(null);setLoading(true);videoRef.current?.load()}}>{locale==="ar"?"إعادة المحاولة":"Retry"}</button></div>}
@@ -83,8 +84,8 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
 
 function MovieCard({movie,locale}:{movie:Movie;locale:Locale}){
   const rtl=locale==="ar";
-  return <a className={styles.card} href={`/${locale}/movies/${movie.id}/`}>
-    <div className={styles.cardPoster}><img src={movie.poster} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`} loading="lazy"/><span>{movie.sources.length?(rtl?"متاح للمشاهدة":"Playable"):(rtl?"معلومات فقط":"Info only")}</span></div>
+  return <a className={styles.card} href={sitePath(`/${locale}/movies/${movie.id}/`)}>
+    <div className={styles.cardPoster}><img src={sitePath(movie.poster)} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`} loading="lazy"/><span>{movie.sources.length?(rtl?"متاح للمشاهدة":"Playable"):(rtl?"معلومات فقط":"Info only")}</span></div>
     <h3>{movieTitle(movie,locale)}</h3>
     <p>{movie.year} · {formatDuration(movie.runtimeMinutes,locale)}</p>
   </a>;
@@ -124,15 +125,15 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
 
   return <div className={styles.page} dir={rtl?"rtl":"ltr"}>
     <header className={styles.header}>
-      <a href={`/${locale}/`} className={styles.back}><ArrowLeft/>{rtl?"الأفلام":"Movies"}</a>
-      <a href={`/${locale}/`} className={styles.brand}><img src="/cineyah-logo.png" alt="Cineyah — سينياه"/></a>
-      <a href={rtl?`/en/movies/${movie.id}/`:`/ar/movies/${movie.id}/`} className={styles.lang}>{rtl?"EN":"العربية"}</a>
+      <a href={sitePath(`/${locale}/`)} className={styles.back}><ArrowLeft/>{rtl?"الأفلام":"Movies"}</a>
+      <a href={sitePath(`/${locale}/`)} className={styles.brand}><img src={sitePath("/cineyah-logo.png")} alt="Cineyah — سينياه"/></a>
+      <a href={sitePath(rtl?`/en/movies/${movie.id}/`:`/ar/movies/${movie.id}/`)} className={styles.lang}>{rtl?"EN":"العربية"}</a>
     </header>
 
     <main>
-      <section className={styles.hero} style={{backgroundImage:`url('${background}')`}}>
+      <section className={styles.hero} style={{backgroundImage:`url('${sitePath(background)}')`}}>
         <div className={styles.heroInner}>
-          <img className={styles.poster} src={movie.poster} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`}/>
+          <img className={styles.poster} src={sitePath(movie.poster)} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`}/>
           <div className={styles.copy}>
             <span className={styles.kicker}>{rtl?"فيلم":"MOVIE"}</span>
             <h1>{title}</h1>
@@ -175,7 +176,7 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
 
         {similar.length>0&&<section className={styles.recommendations}><h2>{rtl?"أفلام مشابهة":"Similar Movies"}</h2><div className={styles.cardGrid}>{similar.map(item=><MovieCard key={item.id} movie={item} locale={locale}/>)}</div></section>}
         {alsoLike.length>0&&<section className={styles.recommendations}><h2>{rtl?"قد يعجبك أيضًا":"You May Also Like"}</h2><div className={styles.cardGrid}>{alsoLike.map(item=><MovieCard key={item.id} movie={item} locale={locale}/>)}</div></section>}
-        <a className={styles.returnLink} href={`/${locale}/`}>{rtl?"الرجوع إلى الأفلام / الرئيسية":"Back to movies / home"}</a>
+        <a className={styles.returnLink} href={sitePath(`/${locale}/`)}>{rtl?"الرجوع إلى الأفلام / الرئيسية":"Back to movies / home"}</a>
       </section>
     </main>
 
