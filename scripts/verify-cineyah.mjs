@@ -1,0 +1,35 @@
+import fs from "node:fs";
+
+const read=path=>fs.readFileSync(path,"utf8");
+const catalog=read("lib/catalog.ts");
+const home=read("components/movie-library-home.tsx");
+const detail=read("components/movie-detail-page.tsx");
+const legacy=read("components/cineyah-app.tsx");
+const route=read("app/[locale]/movies/[id]/page.tsx");
+
+const assert=(condition,message)=>{if(!condition)throw new Error(message)};
+const runtimes=[...catalog.matchAll(/runtimeMinutes:(\d+)/g)].map(match=>Number(match[1]));
+assert(runtimes.length>=1,"No movies found in catalog");
+assert(runtimes.every(minutes=>minutes>=90),`Movie catalog contains runtime below 90 minutes: ${runtimes.filter(minutes=>minutes<90).join(", ")}`);
+const horrorCount=(catalog.match(/genres:\[[^\]]*"horror"/g)||[]).length;
+assert(horrorCount>=20,`Expected at least 20 horror movies, found ${horrorCount}`);
+const genreUnion=catalog.match(/export type Genre = ([^;]+);/)?.[1]??"";
+assert((genreUnion.match(/\|/g)||[]).length+1===19,"Genre union must contain exactly 19 genres");
+assert(home.includes('href={`/${locale}/movies/${movie.id}/`}'),"Movie cards must link to standalone routes");
+assert(!home.includes("setSelected")&&!home.includes("modal-backdrop")&&!home.includes("watch-layer"),"Home must not contain preview/player overlay state");
+assert(!legacy.includes("setSelected")&&!legacy.includes("watching")&&!legacy.includes("modal-backdrop"),"Legacy CineyahApp still contains overlay logic");
+assert(home.includes("لا توجد مسلسلات متاحة حاليًا."),"Series accepted-empty message is missing");
+assert(home.includes("التصنيفات")&&home.includes("Genres"),"Genres disclosure is missing");
+assert(detail.includes("playsInline")&&detail.includes("controls"),"Native HTML5 player requirements missing");
+assert(!detail.includes("crossOrigin"),"Player must not force crossOrigin");
+assert(detail.includes("movie.sources.length>1"),"Quality controls must be gated to multiple real sources");
+assert(detail.includes("movie.subtitles.map"),"Subtitle tracks must be data-driven");
+assert(detail.includes("movie.downloadAllowed&&movie.downloadUrl"),"Download must be gated by rights and a real URL");
+assert(detail.includes("حقوق ومصدر المحتوى")&&detail.includes("Rights & Content Source"),"Rights disclosure is missing");
+assert(detail.includes("أفلام مشابهة")&&detail.includes("Similar Movies")&&detail.includes("قد يعجبك أيضًا"),"Recommendation sections are missing");
+const ulises=catalog.slice(catalog.indexOf('id:"ulises-2012"'),catalog.indexOf('// Horror batch'));
+assert(ulises.includes("sources:[]"),"Ulises playback must remain disabled until a browser-suitable source is verified");
+assert(ulises.includes("downloadAllowed:true")&&ulises.includes("downloadUrl:"),"Ulises legal download metadata is missing");
+assert(route.includes("generateStaticParams"),"Movie routes must be statically enumerated");
+assert(route.includes("alternates")&&route.includes("languages")&&route.includes('"@type":"Movie"'),"Movie SEO metadata/structured data missing");
+console.log(JSON.stringify({movies:runtimes.length,horror:horrorCount,minRuntime:Math.min(...runtimes),homeOverlayFree:true,ulisesPlayback:"disabled-pending-safari-suitable-source"},null,2));
