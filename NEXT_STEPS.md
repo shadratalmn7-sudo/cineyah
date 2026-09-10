@@ -41,3 +41,5 @@ First action next session: inspect run `34492224567` and its `film-discovery-rep
 ## Latest owner priority — supersedes broad acquisition order
 
 Read `CONTENT_ROADMAP.md`. Focus on the first **100 supernatural horror movies** (sorcery, jinn, ghosts, possession); crime-only films do not qualify. Then 100 per other genre. Discovery defaults to `--genre horror`. The user corrected “Arabic” to “horror”; do not add an Arabic-origin restriction.
+
+Horror run 34496939963 has now completed and all 32 results have blocker records in `content/horror-batch-001-review.json`. No title passed. Avoid re-reviewing those same unchanged records. Next useful acquisition step requires new independently authorized feature sources, not another identical discovery run.

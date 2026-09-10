@@ -114,3 +114,7 @@ GitHub discovery run `34492002323` executed, but the search response did not con
 Version 8 successfully published: all 19 genres visible in both sections; series empty message simplified. GitHub code SHA `6e93856b6675eaf7d4b203bb819ba6706bca196f`, Sites SHA `29ea77d250c2d3b552e04a222f19af782c6b0c96`. Browser checks passed genre visibility, horror empty state and Movies/Series isolation.
 
 Owner now prioritizes 100 supernatural horror films first, then 100 per genre. Horror publication count remains 0. `CONTENT_ROADMAP.md` and the discovery query reflect this order.
+
+## Horror batch 001 — reviewed
+
+GitHub run 34496939963 completed successfully and yielded 32 candidate records. None qualifies for publication on the available evidence. Per-item blocker records are in `content/horror-batch-001-review.json`. Some have sub-90-minute media; one explicitly labels excluded erotic/NSFW content; others lack independently verified streaming authority and often verified release dates. A host CC tag is not evidence that the uploader owns studio films. Published horror remains 0/100. Do not reclassify discovery success as publication success or silently relax content constraints.
