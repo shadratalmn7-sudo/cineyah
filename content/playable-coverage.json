@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-09-10T22:53:47.610413+00:00",
+  "policy": {
+    "yearMin": 2000,
+    "runtimeMinMinutes": 60,
+    "documentaries": false,
+    "licenses": [
+      "CC BY",
+      "CC BY-SA",
+      "CC0"
+    ],
+    "browserVideo": "H.264 MP4 with audio and byte-range support"
+  },
+  "targetPerGenre": 12,
+  "uniqueMovies": 140,
+  "withArabicSubtitles": 0,
+  "withEnglishSubtitles": 0,
+  "coverage": {
+    "action": 55,
+    "horror": 32,
+    "comedy": 35,
+    "drama": 23,
+    "romance": 14,
+    "thriller": 26,
+    "crime": 20,
+    "mystery": 15,
+    "adventure": 24,
+    "scifi": 12,
+    "fantasy": 20,
+    "war": 16,
+    "western": 21,
+    "family": 5,
+    "animation": 10,
+    "musical": 5,
+    "history": 2,
+    "biography": 0,
+    "sport": 0
+  },
+  "missing": {
+    "family": 7,
+    "animation": 2,
+    "musical": 7,
+    "history": 10,
+    "biography": 12,
+    "sport": 12
+  }
+}
