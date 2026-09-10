@@ -1,0 +1,60 @@
+name: Fast playable movie catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build-open-playable-fast.py'
+      - '.github/workflows/build-open-playable-fast.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cineyah-fast-playable-catalog
+  cancel-in-progress: true
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Build playable catalog
+        run: python scripts/build-open-playable-fast.py
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.19.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify UI and catalog invariants
+        run: node scripts/verify-cineyah.mjs
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit
+      - name: Verify Netlify static export
+        env:
+          STATIC_EXPORT: 'true'
+          NEXT_PUBLIC_SITE_ORIGIN: 'https://cineyah-movies.netlify.app'
+        run: pnpm exec next build
+      - name: Publish verified batch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/catalog.ts content/generated-playable.json content/playable-coverage.json
+          if git diff --cached --quiet; then
+            echo "No catalog changes"
+            exit 0
+          fi
+          git commit -m "feat: publish fast playback-verified movie batch"
+          git pull --rebase origin main
+          git push origin HEAD:main
