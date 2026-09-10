@@ -1,0 +1,55 @@
+name: Build Ulises movie backdrop
+
+on:
+  push:
+    branches: [chatgpt/fix-movie-pages]
+    paths:
+      - '.github/workflows/build-ulises-backdrop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backdrop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install ffmpeg
+        run: |
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+      - name: Extract a real cinematic frame from the film
+        run: |
+          mkdir -p public/backdrops
+          SOURCE='https://archive.org/download/ulises-largometraje-abel-amador-2012/Ulises_Largometraje_Abel_Amador_2012.mp4'
+          ffmpeg -hide_banner -loglevel error -ss 00:24:00 -i "$SOURCE" -frames:v 1 -vf "scale=1600:-2:force_original_aspect_ratio=decrease,pad=1600:900:(ow-iw)/2:(oh-ih)/2" -q:v 3 public/backdrops/ulises-2012.jpg
+          test -s public/backdrops/ulises-2012.jpg
+      - name: Point catalog at the local Cineyah backdrop
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('lib/catalog.ts')
+          s=p.read_text()
+          old='backdrop:"https://archive.org/download/ulises-largometraje-abel-amador-2012/__ia_thumb.jpg"'
+          new='backdrop:"/backdrops/ulises-2012.jpg"'
+          if old not in s and new not in s:
+              raise SystemExit('Ulises backdrop field not found')
+          p.write_text(s.replace(old,new))
+          PY
+      - name: Verify image dimensions
+        run: identify public/backdrops/ulises-2012.jpg || file public/backdrops/ulises-2012.jpg
+      - name: Commit backdrop
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/backdrops/ulises-2012.jpg lib/catalog.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: use a real Ulises frame as movie backdrop"
+          git pull --rebase origin chatgpt/fix-movie-pages
+          git push origin chatgpt/fix-movie-pages
