@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/build-open-playable-catalog.py'
+      - 'scripts/build-open-playable-fast.py'
       - '.github/workflows/build-open-playable-catalog.yml'
   workflow_dispatch:
 
@@ -13,12 +13,12 @@ permissions:
 
 concurrency:
   group: build-open-playable-catalog
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   discover-verify-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 58
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,7 +32,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
       - name: Discover and playback-check open feature films
-        run: python scripts/build-open-playable-catalog.py
+        run: python scripts/build-open-playable-fast.py
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.19.0
       - name: Install dependencies
