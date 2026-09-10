@@ -1,25 +1,30 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import MovieDetailPage from "@/components/movie-detail-page";
-import { publicMovies } from "@/lib/catalog";
+import { discoverableMovies } from "@/lib/catalog";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, id } = await params;
-  const movie = publicMovies.find(item => item.id === id);
+  const movie = discoverableMovies.find(item => item.id === id);
   if (!movie || !["ar", "en"].includes(locale)) return { robots: { index: false } };
-  const title = locale === "ar" ? `مشاهدة فيلم ${movie.titleAr} ${movie.year}` : `${movie.titleEn} (${movie.year}) — Watch on Cineyah`;
+
+  const title = locale === "ar"
+    ? `فيلم ${movie.titleAr} (${movie.year}) — القصة وأين تشاهده` 
+    : `${movie.titleEn} (${movie.year}) — Story & where to watch`;
+  const description = locale === "ar" ? movie.descriptionAr : movie.descriptionEn;
+
   return {
     title,
-    description: locale === "ar" ? movie.descriptionAr : movie.descriptionEn,
+    description,
     alternates: {
       canonical: `/${locale}/movies/${id}/`,
       languages: { ar: `/ar/movies/${id}/`, en: `/en/movies/${id}/` },
     },
     openGraph: {
       title,
-      description: locale === "ar" ? movie.descriptionAr : movie.descriptionEn,
+      description,
       images: [movie.backdrop ?? movie.poster, movie.poster],
       type: "video.movie",
     },
@@ -29,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function MoviePage({ params }: Props) {
   const { locale, id } = await params;
-  const movie = publicMovies.find(item => item.id === id);
+  const movie = discoverableMovies.find(item => item.id === id);
   if (!movie || !["ar", "en"].includes(locale)) notFound();
 
   const data = {
@@ -41,8 +46,8 @@ export default async function MoviePage({ params }: Props) {
     duration: `PT${movie.runtimeMinutes}M`,
     image: [movie.backdrop ?? movie.poster, movie.poster],
     datePublished: String(movie.year),
-    license: movie.licenseUrl,
     url: `https://cineyah.shadrat-almn7.chatgpt.site/${locale}/movies/${id}/`,
+    ...(movie.licenseUrl ? { license: movie.licenseUrl } : {}),
   };
 
   return <>
