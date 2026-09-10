@@ -2,7 +2,9 @@ import { movieCatalog, type Movie } from "@/lib/catalog";
 import { curatedFreeMovies } from "@/lib/free-movies";
 import { generatedFreeMovies } from "@/lib/generated-free-movies";
 
-const pipelineVerifiedIds = movieCatalog
+const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies, ...generatedFreeMovies];
+
+const pipelineVerifiedIds = allMovies
   .filter(movie => movie.sources.length > 0)
   .filter(movie => movie.rightsStatusEn === "Playback and commercial-use source verified by Cineyah pipeline.")
   .filter(movie => ["CC BY 2.0","CC BY 2.5","CC BY 3.0","CC BY 4.0","CC BY-SA 2.0","CC BY-SA 2.5","CC BY-SA 3.0","CC BY-SA 4.0","CC0 1.0"].includes(movie.licenseName ?? ""))
@@ -24,8 +26,6 @@ function isRealArtwork(value?: string) {
   if (asset.includes("placeholder")) return false;
   return asset.startsWith("/") || asset.startsWith("https://") || asset.startsWith("http://");
 }
-
-const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies, ...generatedFreeMovies];
 
 export function isPublicMovie(movie: Movie) {
   return movie.year >= 2000
