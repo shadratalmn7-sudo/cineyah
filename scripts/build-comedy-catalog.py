@@ -11,9 +11,10 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TARGET = 100
-SEARCH_LIMIT = 5000
+SEARCH_LIMIT = 10000
 UA = "Cineyah/1.0 comedy-batch"
 
+# Commercial-safe reuse only: CC BY / BY-SA / BY-ND, CC0 and Public Domain Mark.
 LICENSES = [
     "https://creativecommons.org/licenses/by/2.0/",
     "https://creativecommons.org/licenses/by/2.5/",
@@ -23,16 +24,23 @@ LICENSES = [
     "https://creativecommons.org/licenses/by-sa/2.5/",
     "https://creativecommons.org/licenses/by-sa/3.0/",
     "https://creativecommons.org/licenses/by-sa/4.0/",
+    "https://creativecommons.org/licenses/by-nd/2.0/",
+    "https://creativecommons.org/licenses/by-nd/2.5/",
+    "https://creativecommons.org/licenses/by-nd/3.0/",
+    "https://creativecommons.org/licenses/by-nd/4.0/",
     "https://creativecommons.org/publicdomain/zero/1.0/",
+    "https://creativecommons.org/publicdomain/mark/1.0/",
 ]
 BAD_TERMS = {
     "trailer","teaser","clip","short film","shorts","episode","episodes","tv episode",
     "porn","erotic","xxx","adult","compilation","collection","boxset","box set","franchise",
     "duology","trilogy","marathon","gameplay","walkthrough","commercials","commercial break",
     "podcast","radio show","news","festival","performance","concert","improv","showcase",
-    "vhs recording","woc recording","greatest hits","complete series","season ","series one","series two"
+    "vhs recording","woc recording","greatest hits","complete series","season ","series one","series two",
+    "lightning talks","channel archive","livestream","live stream","full season","all episodes",
+    "movie collection","movies 1-","movies 1–","full vhs","parody thomas & friends"
 }
-COMEDY_TERMS = ("comedy","comed","slapstick","farce","romantic comedy","romcom","satire","parody","humor","humour")
+COMEDY_TERMS = ("comedy","comed","slapstick","farce","romantic comedy","romcom","satire","humor","humour")
 
 
 def fetch_json(url, timeout=25):
@@ -56,7 +64,8 @@ def parse_year(info):
 
 def license_name(url):
     if "publicdomain/zero" in url: return "CC0 1.0"
-    m = re.search(r"licenses/(by(?:-sa)?)/(\d\.\d)/", url)
+    if "publicdomain/mark" in url: return "Public Domain Mark 1.0"
+    m = re.search(r"licenses/(by(?:-sa|-nd)?)/(\d\.\d)/", url)
     return f"CC {m.group(1).upper()} {m.group(2)}" if m else "Creative Commons"
 
 
@@ -100,6 +109,15 @@ def normalized_title(title):
     return re.sub(r"[^a-z0-9]+", " ", title.lower()).strip()
 
 
+def looks_like_single_feature(title, description):
+    low = f"{title} {description}".lower()
+    if any(term in low for term in BAD_TERMS): return False
+    if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*\d+)\b", title, re.I): return False
+    # Reject obvious channel/user uploads and multi-title bundles masquerading as one feature.
+    if re.search(r"\b(on ch\.?\s*\d+|youtube channel|twitch|playlist|movies?\s+\d+[-–]\d+)\b", low, re.I): return False
+    return True
+
+
 def inspect(identifier):
     safe = urllib.parse.quote(identifier, safe="")
     try:
@@ -108,15 +126,14 @@ def inspect(identifier):
         title, description = clean_text(info.get("title")), clean_text(info.get("description"))
         subjects = info.get("subject",[]); subjects = subjects if isinstance(subjects,list) else [subjects]
         haystack = " ".join([title,description,*[clean_text(x) for x in subjects]]).lower()
-        if not title or any(term in haystack for term in BAD_TERMS): return None
-        if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*\d+)\b", title, re.I): return None
+        if not title or not looks_like_single_feature(title, description): return None
         if not any(term in haystack for term in COMEDY_TERMS): return None
         lic = clean_text(info.get("licenseurl"))
         if lic not in LICENSES: return None
         files = [f for f in meta.get("files",[]) if str(f.get("name","")).lower().endswith((".mp4",".webm"))]
         files.sort(key=source_rank, reverse=True)
         chosen=None; seconds=0
-        for f in files[:4]:
+        for f in files[:5]:
             hinted=reported_seconds(f)
             if hinted and not (5400 <= hinted <= 12600): continue
             media_url = f"https://archive.org/download/{safe}/{urllib.parse.quote(f['name'], safe='/')}"
@@ -152,7 +169,7 @@ def discover_ids():
     terms=" OR ".join(COMEDY_TERMS)
     query = 'mediatype:movies AND licenseurl:(' + license_q + ') AND (subject:(' + terms + ') OR title:(' + terms + ') OR description:(' + terms + '))'
     ids=[]
-    for page in range(1,55):
+    for page in range(1,105):
         rows=min(100,SEARCH_LIMIT-len(ids))
         if rows<=0: break
         params=urllib.parse.urlencode({"q":query,"fl[]":"identifier","rows":rows,"page":page,"output":"json"})
