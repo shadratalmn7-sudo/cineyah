@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Play, X } from "lucide-react";
 import type { Locale, Movie } from "@/lib/catalog";
-import { formatDuration, getSimilarMovies, getYouMayAlsoLike, movieTitle } from "@/lib/catalog";
+import { formatDuration, movieTitle } from "@/lib/catalog";
+import { getSimilarMovies, getYouMayAlsoLike } from "@/lib/public-catalog";
 import { sitePath } from "@/lib/site-path";
 import styles from "./movie-detail-page.module.css";
 
@@ -85,8 +86,8 @@ export default function MovieDetailPage({movie,locale}:{movie:Movie;locale:Local
   const story=rtl?movie.storyAr:movie.storyEn;
   const background=movie.backdrop??movie.poster;
   const playable=movie.sources.length>0;
-  const similar=useMemo(()=>getSimilarMovies(movie,18).filter(item=>item.sources.length>0).slice(0,6),[movie]);
-  const alsoLike=useMemo(()=>getYouMayAlsoLike(movie,18).filter(item=>item.sources.length>0).slice(0,6),[movie]);
+  const similar=useMemo(()=>getSimilarMovies(movie,6),[movie]);
+  const alsoLike=useMemo(()=>getYouMayAlsoLike(movie,6),[movie]);
   const genres=movie.genres.map(genre=>genreLabels[genre][locale]).join(" · ");
 
   useEffect(()=>{
