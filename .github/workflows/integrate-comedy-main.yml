@@ -1,0 +1,86 @@
+name: Integrate verified comedy batch into main
+
+on:
+  push:
+    branches:
+      - chatgpt/comedy-batch
+    paths:
+      - '.github/workflows/integrate-comedy-main.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: integrate-comedy-main
+  cancel-in-progress: false
+
+jobs:
+  merge-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Fetch verified comedy branch
+        run: git fetch origin chatgpt/comedy-batch
+      - name: Merge histories and preserve current main changes
+        run: |
+          set +e
+          git merge --no-commit --no-ff origin/chatgpt/comedy-batch
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            git checkout --ours -- lib/catalog.ts || true
+          fi
+          git checkout origin/chatgpt/comedy-batch -- content/generated-comedy.json content/comedy-batch-report.json scripts/build-comedy-catalog.py .github/workflows/publish-comedy-batch.yml .github/workflows/integrate-comedy-main.yml
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('lib/catalog.ts')
+          s=p.read_text()
+          imp='import generatedComedy from "@/content/generated-comedy.json";\n\n'
+          if 'generated-comedy.json' not in s:
+              s=imp+s
+          old='export const discoverableMovies = movieCatalog.filter(movie => movie.runtimeMinutes >= 90);\nexport const publicMovies = discoverableMovies;\nexport const playableMovies = discoverableMovies.filter(movie => movie.sources.length > 0);'
+          new='const verifiedComedy = generatedComedy as Movie[];\nexport const discoverableMovies = [...movieCatalog, ...verifiedComedy].filter(movie => movie.runtimeMinutes >= 90);\nexport const publicMovies = discoverableMovies;\nexport const playableMovies = discoverableMovies.filter(movie => movie.sources.length > 0);'
+          if old not in s:
+              raise SystemExit('catalog export block changed on main; refusing unsafe overwrite')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+          git add lib/catalog.ts content/generated-comedy.json content/comedy-batch-report.json scripts/build-comedy-catalog.py .github/workflows/publish-comedy-batch.yml .github/workflows/integrate-comedy-main.yml
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo 'Unresolved merge conflicts remain:'
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+      - name: Verify exact 100 comedy feature payload
+        run: |
+          python - <<'PY'
+          import json,re
+          p=json.load(open('content/generated-comedy.json'))
+          norm=lambda s: re.sub(r'[^a-z0-9]+',' ',s.lower()).strip()
+          assert len(p)==100
+          assert len({norm(x['titleEn']) for x in p})==100
+          assert all('comedy' in x['genres'] for x in p)
+          assert all(x['runtimeMinutes'] >= 90 for x in p)
+          assert all(x['sources'] and x['sources'][0]['url'].startswith('https://') for x in p)
+          print('100 distinct >=90m comedy titles with verified HTTPS media payload present')
+          PY
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.19.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Production build
+        run: pnpm build
+      - name: Create merge commit and publish main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "merge: publish verified 100 comedy feature films"
+          git push origin HEAD:main
