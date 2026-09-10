@@ -11,7 +11,7 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TARGET = 100
-SEARCH_LIMIT = 1800
+SEARCH_LIMIT = 5000
 UA = "Cineyah/1.0 comedy-batch"
 
 LICENSES = [
@@ -32,6 +32,7 @@ BAD_TERMS = {
     "podcast","radio show","news","festival","performance","concert","improv","showcase",
     "vhs recording","woc recording","greatest hits","complete series","season ","series one","series two"
 }
+COMEDY_TERMS = ("comedy","comed","slapstick","farce","romantic comedy","romcom","satire","parody","humor","humour")
 
 
 def fetch_json(url, timeout=25):
@@ -67,23 +68,30 @@ def reported_seconds(f):
 def source_rank(f):
     name, fmt = str(f.get("name","")).lower(), str(f.get("format","")).lower()
     size = int(f.get("size") or 0)
-    score = 100 if name.endswith(".mp4") else 0
+    score = 100 if name.endswith(".mp4") else 80 if name.endswith(".webm") else 0
     if any(x in fmt for x in ("h.264","h264","mpeg4","mpeg-4")): score += 40
-    if "512kb" in name or "512kb" in fmt: score += 25
-    if 150_000_000 <= size <= 2_500_000_000: score += 15
+    if any(x in fmt for x in ("vp9","vp8","webm")): score += 25
+    if "512kb" in name or "512kb" in fmt: score += 20
+    if 120_000_000 <= size <= 3_000_000_000: score += 15
     return score
 
 
-def ffprobe_ok(url):
+def probe_media(url):
     try:
-        p = subprocess.run(["ffprobe","-v","error","-rw_timeout","12000000","-show_entries","stream=codec_name,codec_type","-of","json",url],capture_output=True,text=True,timeout=20)
-        if p.returncode: return False
-        streams = json.loads(p.stdout or "{}").get("streams",[])
-        video = [s.get("codec_name") for s in streams if s.get("codec_type") == "video"]
-        audio = [s.get("codec_name") for s in streams if s.get("codec_type") == "audio"]
-        return bool(video and video[0] == "h264" and (not audio or audio[0] in {"aac","mp3"}))
+        p = subprocess.run(["ffprobe","-v","error","-rw_timeout","12000000","-show_entries","format=duration:stream=codec_name,codec_type","-of","json",url],capture_output=True,text=True,timeout=22)
+        if p.returncode: return None
+        data=json.loads(p.stdout or "{}")
+        streams=data.get("streams",[])
+        video=[s.get("codec_name") for s in streams if s.get("codec_type")=="video"]
+        audio=[s.get("codec_name") for s in streams if s.get("codec_type")=="audio"]
+        if not video or video[0] not in {"h264","vp8","vp9","av1"}: return None
+        if audio and audio[0] not in {"aac","mp3","opus","vorbis"}: return None
+        try: duration=float(data.get("format",{}).get("duration") or 0)
+        except Exception: duration=0
+        if duration < 5400 or duration > 12600: return None
+        return duration
     except Exception:
-        return False
+        return None
 
 
 def normalized_title(title):
@@ -102,29 +110,34 @@ def inspect(identifier):
         haystack = " ".join([title,description,*[clean_text(x) for x in subjects]]).lower()
         if not title or any(term in haystack for term in BAD_TERMS): return None
         if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*\d+)\b", title, re.I): return None
-        if not any(term in haystack for term in ("comedy","comed","slapstick","farce","romantic comedy")): return None
+        if not any(term in haystack for term in COMEDY_TERMS): return None
         lic = clean_text(info.get("licenseurl"))
         if lic not in LICENSES: return None
-        files = [f for f in meta.get("files",[]) if str(f.get("name","")).lower().endswith(".mp4") and 5400 <= reported_seconds(f) <= 12600]
-        if not files: return None
+        files = [f for f in meta.get("files",[]) if str(f.get("name","")).lower().endswith((".mp4",".webm"))]
         files.sort(key=source_rank, reverse=True)
-        chosen = files[0]
+        chosen=None; seconds=0
+        for f in files[:4]:
+            hinted=reported_seconds(f)
+            if hinted and not (5400 <= hinted <= 12600): continue
+            media_url = f"https://archive.org/download/{safe}/{urllib.parse.quote(f['name'], safe='/')}"
+            verified=probe_media(media_url)
+            if verified:
+                chosen=f; seconds=verified; break
+        if not chosen: return None
         media_url = f"https://archive.org/download/{safe}/{urllib.parse.quote(chosen['name'], safe='/')}"
-        if not ffprobe_ok(media_url): return None
-        runtime = int(round(reported_seconds(chosen)/60))
-        if not (90 <= runtime <= 210): return None
+        runtime = int(round(seconds/60))
         year = parse_year(info)
         creator = clean_text(info.get("creator")) or "Internet Archive contributor"
         lang = clean_text(info.get("language")) or "Unknown"
         desc_en = description[:520].strip()
         if len(desc_en) < 80:
-            desc_en = f"{title} is a feature-length comedy from {year}, presented from an openly licensed source. Cineyah verified the runtime and browser-compatible H.264 media before adding it to the catalog."
+            desc_en = f"{title} is a feature-length comedy from {year}, presented from an openly licensed source. Cineyah verified the runtime and browser-compatible media before adding it to the catalog."
         return {
             "id": re.sub(r"[^a-z0-9]+","-",identifier.lower()).strip("-")[:90],
             "type":"movie","genres":["comedy"],"titleAr":title,"titleEn":title,"year":year,
             "languageAr":lang,"languageEn":lang,"runtimeMinutes":runtime,
             "poster":f"https://archive.org/download/{safe}/__ia_thumb.jpg",
-            "descriptionAr":f"فيلم كوميدي طويل بعنوان «{title}» من عام {year}. أُضيف إلى سينياه بعد التحقق من أن مدته لا تقل عن ساعة ونصف وأن ملف الفيديو H.264 يعمل مع المشغل.",
+            "descriptionAr":f"فيلم كوميدي طويل بعنوان «{title}» من عام {year}. أُضيف إلى سينياه بعد التحقق من أن مدته لا تقل عن ساعة ونصف وأن ملف الفيديو يعمل مع المشغل.",
             "descriptionEn":desc_en,"publishedAt":dt.date.today().isoformat(),
             "sources":[{"label":"480p","url":media_url}],"subtitles":[],
             "sourceUrl":f"https://archive.org/details/{safe}","licenseName":license_name(lic),"licenseUrl":lic,
@@ -136,9 +149,10 @@ def inspect(identifier):
 
 def discover_ids():
     license_q = " OR ".join(f'\"{x}\"' for x in LICENSES)
-    query = 'mediatype:movies AND licenseurl:(' + license_q + ') AND (subject:(comedy OR comedic OR slapstick OR farce) OR title:(comedy OR comedic OR slapstick OR farce) OR description:(comedy OR comedic OR slapstick OR farce))'
+    terms=" OR ".join(COMEDY_TERMS)
+    query = 'mediatype:movies AND licenseurl:(' + license_q + ') AND (subject:(' + terms + ') OR title:(' + terms + ') OR description:(' + terms + '))'
     ids=[]
-    for page in range(1,20):
+    for page in range(1,55):
         rows=min(100,SEARCH_LIMIT-len(ids))
         if rows<=0: break
         params=urllib.parse.urlencode({"q":query,"fl[]":"identifier","rows":rows,"page":page,"output":"json"})
@@ -151,9 +165,9 @@ def discover_ids():
 def main():
     ids=discover_ids(); print(json.dumps({"stage":"discovery","candidates":len(ids)}),flush=True)
     found=[]; seen=set()
-    for start in range(0,len(ids),96):
-        chunk=ids[start:start+96]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+    for start in range(0,len(ids),128):
+        chunk=ids[start:start+128]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
             for item in pool.map(inspect,chunk):
                 if item:
                     key=normalized_title(item["titleEn"])
