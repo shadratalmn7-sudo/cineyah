@@ -1,5 +1,6 @@
 import { movieCatalog, type Movie } from "@/lib/catalog";
 import { curatedFreeMovies } from "@/lib/free-movies";
+import { generatedFreeMovies } from "@/lib/generated-free-movies";
 
 // A movie is never public merely because metadata or a URL exists.
 // Add an id here only after Cineyah has verified real playback with the exact source.
@@ -18,7 +19,7 @@ function isRealArtwork(value?: string) {
   return asset.startsWith("/") || asset.startsWith("https://") || asset.startsWith("http://");
 }
 
-const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies];
+const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies, ...generatedFreeMovies];
 
 export function isPublicMovie(movie: Movie) {
   return movie.runtimeMinutes >= 60
