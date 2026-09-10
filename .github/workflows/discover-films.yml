@@ -11,7 +11,7 @@ permissions:
   contents: read
 concurrency:
   group: film-discovery
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   discover:
     runs-on: ubuntu-latest
@@ -26,7 +26,7 @@ jobs:
           path: work/discovery-cache
           key: discovery-${{ github.run_id }}
           restore-keys: discovery-
-      - run: python scripts/discover-films.py --limit 1000 --workers 6
+      - run: python scripts/discover-films.py --genre horror --limit 1000 --workers 6
       - uses: actions/upload-artifact@v4
         if: always()
         with:

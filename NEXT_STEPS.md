@@ -37,3 +37,7 @@ GitHub import is finished; do not recreate the repository. Start with latest mai
 5. Verify sitemap/robots on production, then continue toward at least 1,000 distinct films. Do not inflate genre overlap into distinct movie count.
 
 First action next session: inspect run `34492224567` and its `film-discovery-report` artifact. It was still in progress at final documentation time. Start from GitHub main; all 121 tracked files are preserved.
+
+## Latest owner priority — supersedes broad acquisition order
+
+Read `CONTENT_ROADMAP.md`. Focus on the first **100 supernatural horror movies** (sorcery, jinn, ghosts, possession); crime-only films do not qualify. Then 100 per other genre. Discovery defaults to `--genre horror`. The user corrected “Arabic” to “horror”; do not add an Arabic-origin restriction.

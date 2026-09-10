@@ -108,3 +108,9 @@ GitHub discovery run `34492002323` executed, but the search response did not con
 - Discovery run 34492224567 completed successfully: 986 distinct candidate records, 983 with video files, zero discovery-level errors. Of the records, 27 have a reported media length of at least 5,400 seconds; this does not establish feature-film classification or rights. The rest mostly include shorts, tutorials, broadcasts and other non-feature material. No new movie qualified for publication.
 - Discovery query now restricts results to feature-film collection/title/subject signals. This prioritizes candidates but never grants publication rights.
 - Current published catalog remains 1 movie, 0 series. Existing film includes poster, bilingual synopsis and permanent details route.
+
+## Latest production priority
+
+Version 8 successfully published: all 19 genres visible in both sections; series empty message simplified. GitHub code SHA `6e93856b6675eaf7d4b203bb819ba6706bca196f`, Sites SHA `29ea77d250c2d3b552e04a222f19af782c6b0c96`. Browser checks passed genre visibility, horror empty state and Movies/Series isolation.
+
+Owner now prioritizes 100 supernatural horror films first, then 100 per genre. Horror publication count remains 0. `CONTENT_ROADMAP.md` and the discovery query reflect this order.
