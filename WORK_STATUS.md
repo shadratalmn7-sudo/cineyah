@@ -1,6 +1,6 @@
 # Work Status
 
-Last updated: 2026-09-10
+Last updated: 2026-09-10 — GitHub preservation completed
 
 Live environment: https://cineyah.shadrat-almn7.chatgpt.site
 
@@ -15,9 +15,9 @@ Last verified code commit before the GitHub handoff documentation: `f63e423ca584
 - Public movies: **1**
 - Public series: **0**
 - Public episodes: **0**
-- Needs Review: **2**
+- Needs Review: **3**
 - Public movie: **Ulises (2012)** — 97 minutes, Drama/Mystery, direct 1080p MP4, CC BY 4.0.
-- Review candidates: **LOON (2017)** and **Teddy Bears Live Forever (2019)**.
+- Review candidates: **LOON (2017)** and **Teddy Bears Live Forever (2019)**, and **Valkaama (2010)**.
 - Licensed Arabic subtitle tracks attached: **0**
 - Licensed English subtitle tracks attached: **0**
 
@@ -73,3 +73,17 @@ Last verified code commit before the GitHub handoff documentation: `f63e423ca584
 - Famous copyrighted studio films, including Marvel/Spider-Man titles, are excluded unless a verifiable commercial streaming license is obtained.
 - A host's license metadata is not sufficient by itself; every film is checked at item level.
 - YouTube-branded playback is not accepted for the public catalog and is never cosmetically hidden.
+
+## Continuation update — 2026-09-10
+
+- Complete 113-file source was imported to GitHub in commit `855e0885ec6556b08cc26cb00fdbe3e7b315f407`. Its tree `f62bbdbdc6e77e8b58d7f18807b28879d7f72cdb` exactly matched the original local source. This is the last verified GitHub commit before the current update; the current SHA is available in GitHub main/history.
+- New request: at least **1,000 distinct qualifying movies**, covering all main genres. This is NOT achieved. Published inventory remains **1**, new published movies this session **0**. Do not count one movie multiple times toward the distinct total.
+- Extracted reusable catalog/types and duration formatting to `lib/catalog.ts`.
+- Added permanent bilingual `/ar/movies/ulises-2012/` and `/en/movies/ulises-2012/` pages, localized metadata, canonical/hreflang, Movie JSON-LD, sitemap and robots routes. Invalid locale/title paths return 404.
+- Production build passed. Interactive preview verified Movies/Series isolation, duration, permanent detail navigation, and the correct film page title. Sitemap browser navigation was blocked by the browser client; live HTTP verification remains required.
+- Playback attempt still showed the honest retry/error state; end-to-end video and mobile playback are NOT verified. No Arabic or English subtitles attached to the public film.
+- Added resumable batched Internet Archive discovery with six workers, item cache, atomic reports, deduplication by identifier, 1,000-candidate default, and read-only scheduled GitHub Actions. Discovery NEVER publishes host metadata as approved films.
+- Local discovery attempted 1,000 candidates but the first API request timed out: 0 fetched. Report recorded the failure. GitHub workflow execution is pending verification.
+- Valkaama: creator CC BY-SA evidence, English SRT and direct MKV found. Kept in `content/review.json` because codec conversion, measured runtime, hosting and playback still need completion. Arabic subtitles absent.
+- Persistent ingestion, automated publication, secured admin, advertising and completed series playback remain unfinished. The discovery workflow is not a finished ingestion system.
+- Deployment of this update: pending at documentation commit; consult the final session response and Sites deployment status.

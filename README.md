@@ -13,10 +13,10 @@ Cineyah is a bilingual Arabic/English, legal-first streaming platform under acti
 - Movies: 1 (`Ulises`, 2012, 97 minutes, direct MP4, CC BY 4.0)
 - Series: 0
 - Episodes: 0
-- Needs Review: 2
+- Needs Review: 3
 - Licensed Arabic subtitle tracks: 0
 
-The small catalog is intentional: no title is published without an item-level commercial-use license, a direct playable source, and a movie runtime of at least 90 minutes.
+The requested 1,000-film catalog is not complete: no title is published without an item-level commercial-use license, a direct playable source, and a movie runtime of at least 90 minutes.
 
 ## Start here
 
@@ -40,3 +40,7 @@ npm run build
 ## Source of truth
 
 GitHub: https://github.com/shadratalmn7-sudo/cineyah
+
+## Batched discovery
+
+`python scripts/discover-films.py --limit 1000 --workers 6` produces a resumable candidate report. GitHub Actions runs it daily and on workflow/script changes. Candidates are not automatically licensed or published. See `WORK_STATUS.md` for verified execution results.

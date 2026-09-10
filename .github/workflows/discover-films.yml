@@ -1,0 +1,35 @@
+name: Discover licensed feature candidates
+on:
+  push:
+    paths:
+      - 'scripts/discover-films.py'
+      - '.github/workflows/discover-films.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: film-discovery
+  cancel-in-progress: false
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: work/discovery-cache
+          key: discovery-${{ github.run_id }}
+          restore-keys: discovery-
+      - run: python scripts/discover-films.py --limit 1000 --workers 6
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: film-discovery-report
+          path: work/discovery-report.json
+          retention-days: 30

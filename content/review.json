@@ -1,0 +1,5 @@
+[
+  {"id":"loon-2017","title":"LOON","status":"needs_review","reasons":["Prior candidate; creator authority, content classification and source verification incomplete"]},
+  {"id":"teddy-bears-live-forever-2019","title":"Teddy Bears Live Forever","status":"needs_review","reasons":["Prior candidate; creator authority, content classification and source verification incomplete"]},
+  {"id":"valkaama-2010","title":"Valkaama","year":2010,"status":"needs_review","reportedRuntimeMinutes":93,"genres":["drama"],"rightsEvidence":"https://www.valkaama.com/index.php?l=en&page=movie","downloadPage":"https://www.valkaama.com/index.php?l=en&page=valkaama","license":"CC BY-SA 3.0","source":"https://www.valkaama.com/download.php?target=media%2Fmovie%2FValkaama_720p.mkv","englishSubtitle":"https://www.valkaama.com/download.php?target=media%2Fmovie%2Fsubs%2FValkaama_Subtitles_en.srt","arabicSubtitle":null,"reasons":["MKV with AC3 requires browser-compatible media conversion and licensed hosting","Actual runtime and desktop/mobile playback not verified","English SRT needs WebVTT conversion; Arabic not available"]}
+]

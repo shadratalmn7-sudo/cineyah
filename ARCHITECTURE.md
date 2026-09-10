@@ -37,3 +37,7 @@ A failed or incomplete run must preserve the last known-good public catalog. Hea
 ## Deferred infrastructure
 
 Persistent D1-backed administration, reports, aggregated analytics, scheduled ingestion, health checks, and advertising integrations remain unbuilt. HilltopAds requires owner authentication and real zone identifiers before any live VAST or external-ad behavior can be verified. No revenue figures may be synthesized.
+
+## Implemented continuation
+
+`lib/catalog.ts` is the shared typed catalog and duration utility. Public title routes consume it for metadata and Movie JSON-LD. `app/sitemap.ts` and `app/robots.ts` generate search-engine endpoints from the public catalog. `scripts/discover-films.py` and the read-only GitHub workflow collect review candidates; they do not implement the remaining rights/probe/publication pipeline.

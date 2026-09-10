@@ -25,3 +25,13 @@ Movies and Series must remain separate in discovery, genres, search, and results
 Do not use Moviz Time or similar aggregation sites unless they provide independently verifiable commercial redistribution and embedding authorization for the specific title. Search visibility and technical playback are not licenses.
 
 After acquisition: implement persistent ingestion/admin, health checks, localized SEO routes/sitemaps, analytics, then policy-compliant advertising.
+
+## Latest concrete continuation
+
+GitHub import is finished; do not recreate the repository. Start with latest main, not the old local handoff commit. The latest source adds `lib/catalog.ts`, title routes and `scripts/discover-films.py`.
+
+1. Inspect Actions → Discover licensed feature candidates. Its first push and daily schedule produce an artifact; verify actual execution and download the report. Local API request timed out in Work. Do not claim 1,000 discovered or published from the configured limit.
+2. Review `content/review.json`, particularly Valkaama. Retrieve the creator-authorized MKV and English SRT, measure the complete runtime, convert AC3 to AAC/MP4 and SRT to VTT, arrange authorized hosting, preserve ShareAlike attribution, and test before publishing. Prefer licensed Arabic subtitles.
+3. Add the missing rights/probe/synopsis/import stages. Discovery only is implemented. Never automate rights approval from Internet Archive license metadata alone.
+4. Diagnose Ulises playback: current cloud browser reaches retry/error, not confirmed playback. Investigate source headers/codecs and actual device behavior.
+5. Verify sitemap/robots on production, then continue toward at least 1,000 distinct films. Do not inflate genre overlap into distinct movie count.

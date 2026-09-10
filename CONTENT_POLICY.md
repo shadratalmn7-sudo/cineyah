@@ -63,3 +63,7 @@ No empty genre is exposed merely to inflate the taxonomy. One film may legitimat
 - Public: **Ulises (2012)**, 97 minutes, Drama/Mystery, CC BY 4.0, direct 1080p MP4.
 - Needs Review: **LOON (2017)** and **Teddy Bears Live Forever (2019)**. They remain hidden pending stronger safety, metadata, source, and classification review.
 - Series: none published. Random or incomplete series are not used to fill the section.
+
+## Updated overall target
+
+At least **1,000 distinct qualifying feature films** across the main genres. Earlier genre targets above remain discovery guidance. Genre overlap never increases the distinct film count. Target not yet achieved.
