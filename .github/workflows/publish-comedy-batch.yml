@@ -1,0 +1,48 @@
+name: Build 100 verified comedy movies
+
+on:
+  push:
+    branches:
+      - chatgpt/comedy-batch
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: comedy-100-batch
+  cancel-in-progress: false
+
+jobs:
+  build-comedy-catalog:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/comedy-batch
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Ensure ffprobe is available
+        run: |
+          if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+      - name: Discover and playback-verify 100 comedy features
+        run: python scripts/build-comedy-catalog.py
+      - name: Install app dependencies
+        run: bash scripts/install-pnpm.sh
+      - name: Production build
+        run: pnpm build
+      - name: Commit verified catalog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/generated-comedy.json content/comedy-batch-report.json
+          test "$(python -c 'import json; print(len(json.load(open("content/generated-comedy.json"))))')" = "100"
+          git commit -m "feat: publish 100 playback-verified comedy movies"
+          git push origin HEAD:chatgpt/comedy-batch
