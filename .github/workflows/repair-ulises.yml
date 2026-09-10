@@ -1,7 +1,7 @@
-name: Repair Ulises playback
+name: Review Ulises playback candidates
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
       - '.github/workflows/repair-ulises.yml'
@@ -9,39 +9,38 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  repair:
+  review:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Ensure ffmpeg tools
+      - name: Ensure ffprobe
         run: |
-          if ! command -v ffprobe >/dev/null 2>&1 || ! command -v ffmpeg >/dev/null 2>&1; then
+          if ! command -v ffprobe >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-      - name: Range, decode and extract real movie backdrop
+      - name: Inspect legal Internet Archive candidates without publishing
         run: python scripts/repair-ulises.py
-      - name: Install app dependencies
+      - name: Assert public catalog still disables Ulises playback
         run: |
-          corepack enable
-          pnpm install --frozen-lockfile
-      - name: Production build
-        run: pnpm build
-      - name: Commit verified source and backdrop
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/catalog.ts content/ulises-playback-verified.json public/backdrops/ulises-2012.jpg
-          git diff --cached --quiet && exit 0
-          git commit -m "fix: use verified Ulises playback and real movie backdrop"
-          git pull --rebase origin main
-          git push origin main
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('lib/catalog.ts').read_text(encoding='utf-8')
+          start = text.index('id:"ulises-2012"')
+          end = text.index('// Horror batch', start)
+          block = text[start:end]
+          assert 'sources:[]' in block, 'Ulises must remain non-playable until Safari/iPhone playback is verified'
+          print('Ulises public playback remains disabled.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ulises-playback-review
+          path: content/ulises-playback-review.json
+          if-no-files-found: error
