@@ -118,3 +118,8 @@ Owner now prioritizes 100 supernatural horror films first, then 100 per genre. H
 ## Horror batch 001 — reviewed
 
 GitHub run 34496939963 completed successfully and yielded 32 candidate records. None qualifies for publication on the available evidence. Per-item blocker records are in `content/horror-batch-001-review.json`. Some have sub-90-minute media; one explicitly labels excluded erotic/NSFW content; others lack independently verified streaming authority and often verified release dates. A host CC tag is not evidence that the uploader owns studio films. Published horror remains 0/100. Do not reclassify discovery success as publication success or silently relax content constraints.
+
+## Genre disclosure update
+- All 19 genres now sit beneath a collapsible Genres / التصنيفات control in Movies and Series.
+- The list is initially closed, expands downward, and shows the selected genre in the trigger.
+- Verified in preview: opening, filtering Horror, switching to Series without movie results, and closing the list. Production build passed.

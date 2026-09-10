@@ -22,3 +22,17 @@ footer{margin-top:50px;border-top:1px solid #ffffff12;padding:40px clamp(22px,4v
 
 /* Keep the full genre catalog visible, including empty categories. */
 .genre-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));overflow:visible;gap:10px}.genre-strip button{min-width:0;align-items:center;text-align:center}.genre-strip button small{font-size:14px}.series-hero{min-height:340px;padding-bottom:30px}.empty-series{min-height:120px}.empty-series strong,.empty-series>span{display:none}@media(max-width:720px){.genre-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.genre-strip button{padding:10px 5px}.genre-strip button b{font-size:14px}.series-hero{min-height:300px;padding-bottom:20px}}
+
+/* Expand genre choices below the shared Movies / Series genre control. */
+.genre-disclosure{margin:8px clamp(20px,4vw,68px) 24px;border:1px solid #ffffff1a;border-radius:16px;background:#0c1220;overflow:hidden}
+.genre-trigger{padding:18px 20px;color:#fff;font-size:18px;align-items:center;text-align:start;cursor:pointer}
+.genre-trigger:hover{text-decoration:none;background:#ffffff05}
+.genre-trigger small{margin-inline-start:auto;font-size:13px;font-weight:400;color:#aeb8ca}
+.genre-trigger>svg{width:20px;height:20px;color:#ff4935}
+.genre-disclosure .genre-strip{padding:8px 16px 4px}
+.genre-disclosure [data-slot=accordion-content][data-state=open]{animation:genre-expand 220ms ease-out}
+.genre-disclosure [data-slot=accordion-content][data-state=closed]{animation:genre-collapse 180ms ease-in}
+@keyframes genre-expand{from{height:0;opacity:0}to{height:var(--radix-accordion-content-height);opacity:1}}
+@keyframes genre-collapse{from{height:var(--radix-accordion-content-height);opacity:1}to{height:0;opacity:0}}
+@media(prefers-reduced-motion:reduce){.genre-disclosure [data-slot=accordion-content]{animation:none!important}}
+@media(max-width:720px){.genre-disclosure{margin-inline:18px}.genre-trigger{padding:16px}.genre-disclosure .genre-strip{padding-inline:10px}}
