@@ -9,6 +9,7 @@ import urllib.request
 ID = "ulises-largometraje-abel-amador-2012"
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CAT = ROOT / "lib/catalog.ts"
+BACKDROP = ROOT / "public/backdrops/ulises-2012.jpg"
 UA = "Mozilla/5.0 CineyahPlaybackCheck/1.0"
 
 
@@ -110,6 +111,20 @@ def candidate_score(name, info, size):
     return (1 if web_derivative else 0, -oversized_penalty, useful_height, -size)
 
 
+def extract_backdrop(url):
+    BACKDROP.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg", "-y", "-v", "error",
+        "-ss", "600", "-i", url,
+        "-frames:v", "1", "-vf", "scale=1600:-2",
+        "-q:v", "3", str(BACKDROP),
+    ]
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+    if p.returncode or not BACKDROP.exists() or BACKDROP.stat().st_size < 20000:
+        raise SystemExit("Could not extract a real movie-frame backdrop: " + (p.stderr or "unknown ffmpeg error")[-1200:])
+    return "/backdrops/ulises-2012.jpg"
+
+
 meta = get_json(f"https://archive.org/metadata/{ID}")
 candidates = []
 for file_obj in meta.get("files", []):
@@ -163,6 +178,11 @@ end = text.find("sourceUrl:", start)
 if end < 0:
     raise SystemExit("Ulises sourceUrl boundary not found in catalog")
 segment = text[start:end]
+# Insert or refresh the cinematic backdrop in the movie record.
+if 'backdrop:' in segment:
+    segment = re.sub(r'backdrop:"[^"]*"', f'backdrop:"{backdrop_url}"', segment, count=1)
+else:
+    segment = re.sub(r'(poster:"[^"]+",)', r'\1backdrop:"' + backdrop_url + '",', segment, count=1)
 source_re = re.compile(r'sources:\[\{label:"(?:1080p|720p|480p|360p)",url:"[^"]+"\}\]')
 match = source_re.search(segment)
 if not match:
@@ -185,6 +205,7 @@ report = {
     "httpRange": http_result,
     "decodePlayback": decode_result,
     "sourceChanged": source_changed,
+    "backdrop": backdrop_url,
     "rejectedCandidates": errors,
 }
 (ROOT / "content").mkdir(exist_ok=True)
