@@ -6,6 +6,8 @@ const home=read("components/movie-library-home.tsx");
 const detail=read("components/movie-detail-page.tsx");
 const legacy=read("components/cineyah-app.tsx");
 const route=read("app/[locale]/movies/[id]/page.tsx");
+const ulisesWorkflow=read(".github/workflows/repair-ulises.yml");
+const ulisesReview=read("scripts/repair-ulises.py");
 
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 const runtimes=[...catalog.matchAll(/runtimeMinutes:(\d+)/g)].map(match=>Number(match[1]));
@@ -30,6 +32,10 @@ assert(detail.includes("أفلام مشابهة")&&detail.includes("Similar Movi
 const ulises=catalog.slice(catalog.indexOf('id:"ulises-2012"'),catalog.indexOf('// Horror batch'));
 assert(ulises.includes("sources:[]"),"Ulises playback must remain disabled until a browser-suitable source is verified");
 assert(ulises.includes("downloadAllowed:true")&&ulises.includes("downloadUrl:"),"Ulises legal download metadata is missing");
+assert(ulisesWorkflow.includes("contents: read"),"Ulises review workflow must be read-only");
+assert(!ulisesWorkflow.includes("git push")&&!ulisesWorkflow.includes("contents: write"),"Ulises review workflow must never publish automatically");
+assert(ulisesReview.includes('"eligibleForAutoPublish": False')&&ulisesReview.includes('"safariIPhoneVerified": False'),"Ulises source review must not equate codec/HTTP checks with Safari verification");
+assert(!fs.existsSync("content/ulises-playback-verified.json"),"Misleading Ulises verified playback report must not exist");
 assert(route.includes("generateStaticParams"),"Movie routes must be statically enumerated");
 assert(route.includes("alternates")&&route.includes("languages")&&route.includes('"@type":"Movie"'),"Movie SEO metadata/structured data missing");
-console.log(JSON.stringify({movies:runtimes.length,horror:horrorCount,minRuntime:Math.min(...runtimes),homeOverlayFree:true,ulisesPlayback:"disabled-pending-safari-suitable-source"},null,2));
+console.log(JSON.stringify({movies:runtimes.length,horror:horrorCount,minRuntime:Math.min(...runtimes),homeOverlayFree:true,ulisesPlayback:"disabled-pending-real-safari-test",ulisesAutomation:"review-only"},null,2));
