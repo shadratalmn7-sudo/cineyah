@@ -1,0 +1,65 @@
+name: Build 100 verified comedy movies
+
+on:
+  push:
+    branches:
+      - chatgpt/comedy-batch
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: comedy-100-batch
+  cancel-in-progress: true
+
+jobs:
+  build-comedy-catalog:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/comedy-batch
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Ensure ffprobe is available
+        run: |
+          if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+      - name: Discover and playback-verify 100 comedy features
+        run: python scripts/build-comedy-catalog.py
+      - name: Install pinned pnpm
+        run: npm install --global pnpm@11.19.0
+      - name: Install app dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Production build
+        run: pnpm build
+      - name: Verify exactly 100 distinct features
+        run: |
+          python - <<'PY'
+          import json,re
+          p=json.load(open('content/generated-comedy.json'))
+          norm=lambda s: re.sub(r'[^a-z0-9]+',' ',s.lower()).strip()
+          assert len(p)==100
+          assert len({norm(x['titleEn']) for x in p})==100
+          assert all('comedy' in x['genres'] for x in p)
+          assert all(90 <= x['runtimeMinutes'] <= 210 for x in p)
+          assert all(x['sources'] and x['sources'][0]['url'].startswith('https://') for x in p)
+          print('verified exactly 100 distinct comedy feature films')
+          PY
+      - name: Commit verified catalog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/generated-comedy.json content/comedy-batch-report.json
+          git commit -m "feat: publish 100 playback-verified comedy movies"
+          git push origin HEAD:chatgpt/comedy-batch

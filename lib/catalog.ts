@@ -1,3 +1,5 @@
+import generatedComedy from "@/content/generated-comedy.json";
+
 export type Locale = "ar" | "en";
 export type ContentType = "movie" | "series";
 export type Genre = "action"|"horror"|"comedy"|"drama"|"romance"|"thriller"|"crime"|"mystery"|"adventure"|"scifi"|"fantasy"|"war"|"western"|"family"|"animation"|"musical"|"history"|"biography"|"sport";
@@ -165,7 +167,8 @@ export const movieCatalog: Movie[] = [
   },
 ];
 
-export const discoverableMovies = movieCatalog.filter(movie => movie.runtimeMinutes >= 90);
+const verifiedComedy = generatedComedy as Movie[];
+export const discoverableMovies = [...movieCatalog, ...verifiedComedy].filter(movie => movie.runtimeMinutes >= 90);
 export const publicMovies = discoverableMovies;
 export const playableMovies = discoverableMovies.filter(movie => movie.sources.length > 0);
 
