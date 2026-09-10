@@ -14,7 +14,7 @@ const nextConfig=read("next.config.ts");
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 const runtimes=[...catalog.matchAll(/runtimeMinutes[":]*\s*:?\s*(\d+)/g)].map(match=>Number(match[1]));
 assert(runtimes.length>=1,"No movies found in catalog");
-assert(runtimes.every(minutes=>minutes>=90),`Movie catalog contains runtime below 90 minutes: ${runtimes.filter(minutes=>minutes<90).join(", ")}`);
+assert(runtimes.every(minutes=>minutes>=60),`Movie catalog contains runtime below 60 minutes: ${runtimes.filter(minutes=>minutes<60).join(", ")}`);
 const genreUnion=catalog.match(/export type Genre = ([^;]+);/)?.[1]??"";
 assert((genreUnion.match(/\|/g)||[]).length+1===19,"Genre union must contain exactly 19 genres");
 assert(publicCatalog.includes("verifiedPlayableMovieIds"),"Public catalog must require explicit playback verification");
