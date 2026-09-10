@@ -14,7 +14,7 @@ permissions:
 jobs:
   repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,20 +22,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Ensure ffprobe
+      - name: Ensure ffmpeg tools
         run: |
-          if ! command -v ffprobe >/dev/null 2>&1; then
+          if ! command -v ffprobe >/dev/null 2>&1 || ! command -v ffmpeg >/dev/null 2>&1; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-      - name: Probe and repair Ulises source
+      - name: Range, decode and extract real movie backdrop
         run: python scripts/repair-ulises.py
-      - name: Commit verified source
+      - name: Install app dependencies
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: Production build
+        run: pnpm build
+      - name: Commit verified source and backdrop
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add lib/catalog.ts content/ulises-playback-verified.json
+          git add lib/catalog.ts content/ulises-playback-verified.json public/backdrops/ulises-2012.jpg
           git diff --cached --quiet && exit 0
-          git commit -m "fix: use playback-verified Ulises rendition"
+          git commit -m "fix: use verified Ulises playback and real movie backdrop"
           git pull --rebase origin main
           git push origin main
