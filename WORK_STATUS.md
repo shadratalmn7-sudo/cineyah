@@ -1,125 +1,105 @@
-# Work Status
+# Cineyah — Work Status
 
-Last updated: 2026-09-10 — GitHub preservation completed
+Last updated: 2026-09-10
 
-Live environment: https://cineyah.shadrat-almn7.chatgpt.site
+GitHub source of truth: `shadratalmn7-sudo/cineyah`
 
-GitHub source of truth: https://github.com/shadratalmn7-sudo/cineyah
+Configured live URL: `https://cineyah.shadrat-almn7.chatgpt.site`
 
-Prior verified deployment: version 6 from local Sites commit `f63e423ca584dd3e2fd5016c415dbcdf5737e821` (succeeded on 2026-09-10).
+## Last implementation commit
 
-Last verified code commit before the GitHub handoff documentation: `f63e423ca584dd3e2fd5016c415dbcdf5737e821`. The final GitHub handoff SHA is reported in the completion message and can be read with `git rev-parse HEAD` after cloning.
+- Latest code/implementation merge SHA before this handoff document: `0c0cbbd00ebaffda79143700c06a4978fe3bdb90`.
+- This `WORK_STATUS.md` update is committed after that SHA; another agent should read current `main` HEAD for the documentation commit itself.
+
+## What was completed
+
+- Re-read the latest `main` before implementation and preserved valid existing work.
+- Homepage movie interactions are link-based and route to `/{locale}/movies/{id}/`; the old homepage `selected` / `watching` preview/player overlay path was retired.
+- Removed the legacy click interceptor, legacy overlay/player global CSS, and the self-mutating preview patch workflow/script that could reintroduce the old overlay.
+- Built one dynamic bilingual movie-page template for all public movies, with poster/backdrop, available titles, description/story, year, localized runtime, genres, country/language/director/cast when known, real quality/subtitle state, rights/source information, conditional watch/download actions, recommendations, back navigation and AR/EN switching.
+- Added collapsible `حقوق ومصدر المحتوى` / `Rights & Content Source` with only known source/license/attribution/download/right-status fields.
+- Added `أفلام مشابهة` / `Similar Movies` and `قد يعجبك أيضًا` / `You May Also Like`; the current title is excluded and all recommendation cards use standalone movie routes.
+- Native player uses HTML5 `<video controls playsInline>` with no YouTube/iframe primary player and no forced `crossOrigin`. It has a finite 15-second readiness timeout, explicit failure/retry state, and source fallback only when multiple declared legal sources exist.
+- Quality UI is rendered only when more than one real source exists. Subtitle tracks come only from declared licensed tracks. Download appears only when both `downloadAllowed` and a concrete `downloadUrl` exist.
+- Mobile CSS was revised for homepage, movie page, player, cards, hero, search, spacing, recommendation rails and portrait/landscape sizing. Arabic pages use RTL via `dir`.
+- Series remains an accepted section with zero titles and the Arabic empty message `لا توجد مسلسلات متاحة حاليًا.`
+- All 19 project genres are available under the collapsible Genres / التصنيفات control.
+- Movie publication invariant is strict `runtimeMinutes >= 90`; the current catalog minimum is 92 minutes.
+- Added the first 20-title Horror batch focused on supernatural/occult/haunted/demonic/jinn/black-magic themes. These are public metadata pages only because Cineyah does not currently have verified streaming rights for them.
+- Added bilingual SEO metadata, canonical, hreflang AR/EN, OpenGraph, static route enumeration and truthful Movie JSON-LD fields.
+- Added CI invariants preventing runtime-under-90 movies, homepage overlay regressions, YouTube/iframe playback, forced CORS, fake quality controls, missing rights/recommendation sections and accidental Ulises playback re-enablement.
+
+## Build and verification
+
+Three relevant PR verification runs completed successfully after the implementation and cleanup work. Each verified:
+
+- pinned `pnpm` installation;
+- `pnpm install --frozen-lockfile`;
+- catalog/UX invariants;
+- `pnpm exec tsc --noEmit`;
+- `pnpm build` production build.
+
+Latest verification run: GitHub Actions run `34514528580`, completed successfully on 2026-09-10. The immediately preceding cleanup run `34514195985` and main implementation run `34513954698` also completed successfully.
+
+The production build statically enumerates Arabic and English movie routes through `generateStaticParams`, so both `/ar/movies/{id}/` and `/en/movies/{id}/` are covered by the build.
+
+No real iPhone/Safari device was available in this execution environment. Mobile/iOS behavior was therefore code/HTML/CSS/CI-reviewed, not claimed as real-device playback verification.
+
+## Player status
+
+- Native HTML5 player architecture: implemented.
+- YouTube/iframe primary playback: absent by invariant.
+- Forced `crossOrigin="anonymous"`: absent by invariant.
+- Native controls provide play/pause, current time/duration, seek, volume where the platform exposes it, and native fullscreen behavior where supported.
+- Loading cannot remain indefinite: a 15-second readiness timeout exposes a clear error state.
+- Real multi-source fallback is implemented, but no current movie has an approved playback source, so it is not being falsely demonstrated with synthetic sources.
+- Current playable-stream movie count: **0**.
+
+## Ulises (2012)
+
+- Public movie information page remains available.
+- Cineyah in-site playback is **disabled** (`sources: []`).
+- Reason: the currently known Internet Archive MP4 is about 3,888,170,753 bytes (~3.89 GB). Although prior server probes showed H.264/AAC, HTTP range support and successful ffmpeg decoding, the user's real iPhone/Safari test stalled at approximately `0:00 / 1:37:28`. Server/codec probes are not treated as proof of Safari playback.
+- Declared item license retained: **CC BY 4.0**, source: Internet Archive, attribution: `Ulises (2012), Abel Amador Alcalá`.
+- A source download link remains exposed because the declared license permits it; this is separate from Cineyah playback.
+- The old `repair-ulises` workflow/script was deleted so it cannot automatically republish the known-stalling MP4.
+- Required before restoring Watch: a legal browser-suitable rendition/source plus practical Safari/iPhone playback verification.
 
 ## Current inventory
 
-- Public movies: **1**
-- Public series: **0**
-- Public episodes: **0**
-- Needs Review: **3**
-- Public movie: **Ulises (2012)** — 97 minutes, Drama/Mystery, direct 1080p MP4, CC BY 4.0.
-- Review candidates: **LOON (2017)** and **Teddy Bears Live Forever (2019)**, and **Valkaama (2010)**.
-- Licensed Arabic subtitle tracks attached: **0**
-- Licensed English subtitle tracks attached: **0**
+- Public movie pages: **25**.
+- Public playable-stream movies: **0**.
+- Horror public movie pages: **20**.
+- Horror playable-stream movies: **0**.
+- Series: **0**.
+- Licensed subtitle tracks attached: **0**.
+- All public movies satisfy `>= 90 min`; current minimum runtime: **92 min**.
 
-## Built in the current source tree
+Metadata/no-Cineyah-playback pages currently include all 25 public movies. Ulises additionally exposes its licensed source download link. The four pre-existing studio metadata pages are `Spider-Man: No Way Home`, `Dune: Part Two`, `The Batman`, and `Interstellar`. The 20 Horror pages are `The Exorcist`, `The Shining`, `Rosemary's Baby`, `The Omen`, `The Changeling`, `The Others`, `The Conjuring`, `The Conjuring 2`, `Insidious`, `Sinister`, `Hereditary`, `The Witch`, `The Wailing`, `Noroi: The Curse`, `Incantation`, `The Exorcism of Emily Rose`, `The Rite`, `The Possession`, `Dabbe: The Possession`, and `Siccin`.
 
-- Bilingual Arabic/English application with centralized interface copy.
-- Fast Movies/Series mode switch with separated catalog, genres, search scope, and empty states.
-- English titles and genre names primary, Arabic directly beneath.
-- Hard 90-minute publication filter for movies and localized duration formatting (`1 ساعة و37 دقيقة` / `1h 37m`).
-- One item-level verified, post-2005, feature-length public movie.
-- Cineyah-branded direct HTML5 player with no YouTube iframe or external channel branding.
-- Play/pause, seeking, volume, fullscreen, Picture in Picture where supported, and device-local resume state.
-- Quality menu generated only from actual approved renditions.
-- Subtitle menu restricted to Arabic, English, and Off; Arabic defaults on when available.
-- Series scaffolding for seasons, season accents, episodes, previous/next navigation, and a next-episode countdown. No unverified series content is published.
-- Responsive catalog, instant search suggestions, bilingual genre filters, detail view, automatic seven-day New badge, and reduced-motion handling.
-- Per-item source, license, attribution, and download-permission fields.
+## Rights / content-source state
 
-## Tested
+- Ulises: Internet Archive item page; declared CC BY 4.0; attribution recorded; download allowed; in-site playback disabled pending a Safari-suitable source.
+- Four studio titles: metadata/information only with JustWatch information links; Cineyah does not publish a stream or download for them.
+- Horror batch: metadata sources are recorded per item (primarily Wikipedia; IMDb for Siccin). These references are metadata sources, **not** streaming-right grants. No Watch or Download action is published for the Horror batch.
+- No pirated source, DRM bypass, hidden YouTube branding, unknown-rights subtitle file or fabricated license was added.
 
-- Fresh production build passed on 2026-09-10.
-- Browser QA passed for Arabic rendering, Movies/Series separation without refresh, series empty-state isolation, scoped instant search, 90-minute runtime formatting, one native `<video>`, zero iframes, zero YouTube text/branding, and the direct approved MP4 URL.
-- The source accepted byte-range delivery (`206`) for a one-megabyte probe and exposed the expected 3,888,170,753-byte media size.
-- The cloud-browser media decoder showed the new honest retry state instead of completing playback. Playback is therefore **built and source-reachable, but not verified end-to-end in the cloud browser**.
-- Subtitle menu behavior is implemented but cannot be media-verified because the sole public film has no licensed Arabic or English subtitle track.
-- Series player/autoplay remains scaffold-only and is not claimed as tested.
+## Deployment status
 
-## Not complete
+- GitHub `main` contains the implementation and verified builds.
+- The repository has no GitHub Actions deployment workflow for the configured `chatgpt.site` host.
+- This chat execution environment exposes GitHub write/actions access but no ChatGPT Sites deployment control.
+- Direct live fetch of `https://cineyah.shadrat-almn7.chatgpt.site` was attempted from the available web runtime and returned a cache-miss/fetch failure, so **deployment of the new `main` is not claimed as verified live**.
+- Previous versions of the site existed at the configured URL, but that is not evidence that this specific `main` SHA is deployed.
 
-- Catalog targets: 100 each for Action, Horror, and Comedy; 50 for every other listed genre. Current published coverage is Drama 1 and Mystery 1 from the same film; all other genre counts are zero.
-- Legal Arabic subtitles for the current public film.
-- Persistent database-backed ingestion, admin actions, Needs Review, reports, analytics, and health checks.
-- Automated discovery, source/license rechecks, subtitle probes, deduplication, and sitemap regeneration.
-- Dedicated watch URLs and production verification of generated SEO/sitemap endpoints. Detail URLs, metadata and Movie structured data are now implemented.
-- HilltopAds VAST, external 30-minute cooldown ad, download-ad completion gate, AdBlock differentiation, and official revenue data.
-- End-to-end cross-browser and mobile playback verification.
+## Remaining issues
 
-## Subsystem status
+- Deploy/synchronize current GitHub `main` to the configured ChatGPT Sites project using an environment that exposes the Sites deployment action, then verify the deployed revision.
+- Perform a real iPhone/Safari QA pass for homepage navigation, RTL, movie-page mobile layout, native player shell and fullscreen behavior.
+- Find a smaller/legal browser-suitable Ulises playback rendition or another authorized source and verify it on Safari/iPhone before restoring Watch.
+- Acquire/verify actual streaming rights and any licensed subtitle tracks before converting Horror metadata pages into playable titles.
+- Continue Horror toward the larger catalog target only under the same `>=90 min` and legal-first rules.
 
-- Public site: live.
-- Movies: 1 published; catalog targets are not met.
-- Series: UI/data scaffold only; 0 public series and 0 episodes.
-- Player: native Cineyah player is built; the direct source responds, but the cloud-browser decoder did not complete playback and showed the retry state.
-- Subtitles: Arabic/English/Off UI is built; no legally licensed track is attached to the current film.
-- SEO: bilingual title routes, canonical/hreflang, Movie structured data and generated sitemap/robots implemented. Live HTTP verification is still outstanding.
-- Ads: not connected; no VAST, external cooldown ad, download ad gate, or revenue API.
-- Admin: not implemented as a secured end-to-end dashboard.
-- Automated ingestion: scheduled candidate discovery implemented; rights/probe/publication pipeline and persistent importer remain incomplete.
+## Next handoff action
 
-## Important constraints
-
-- No paid service is enabled.
-- Famous copyrighted studio films, including Marvel/Spider-Man titles, are excluded unless a verifiable commercial streaming license is obtained.
-- A host's license metadata is not sufficient by itself; every film is checked at item level.
-- YouTube-branded playback is not accepted for the public catalog and is never cosmetically hidden.
-
-## Continuation update — 2026-09-10
-
-- Complete 113-file source was imported to GitHub in commit `855e0885ec6556b08cc26cb00fdbe3e7b315f407`. Its tree `f62bbdbdc6e77e8b58d7f18807b28879d7f72cdb` exactly matched the original local source. This is the last verified GitHub commit before the current update; the current SHA is available in GitHub main/history.
-- New request: at least **1,000 distinct qualifying movies**, covering all main genres. This is NOT achieved. Published inventory remains **1**, new published movies this session **0**. Do not count one movie multiple times toward the distinct total.
-- Extracted reusable catalog/types and duration formatting to `lib/catalog.ts`.
-- Added permanent bilingual `/ar/movies/ulises-2012/` and `/en/movies/ulises-2012/` pages, localized metadata, canonical/hreflang, Movie JSON-LD, sitemap and robots routes. Invalid locale/title paths return 404.
-- Production build passed. Interactive preview verified Movies/Series isolation, duration, permanent detail navigation, and the correct film page title. Sitemap browser navigation was blocked by the browser client; live HTTP verification remains required.
-- Playback attempt still showed the honest retry/error state; end-to-end video and mobile playback are NOT verified. No Arabic or English subtitles attached to the public film.
-- Added resumable batched Internet Archive discovery with six workers, item cache, atomic reports, deduplication by identifier, 1,000-candidate default, and read-only scheduled GitHub Actions. Discovery NEVER publishes host metadata as approved films.
-- Local discovery attempted 1,000 candidates but the first API request timed out: 0 fetched. Report recorded the failure. GitHub workflow execution is pending verification.
-- Valkaama: creator CC BY-SA evidence, English SRT and direct MKV found. Kept in `content/review.json` because codec conversion, measured runtime, hosting and playback still need completion. Arabic subtitles absent.
-- Persistent ingestion, automated publication, secured admin, advertising and completed series playback remain unfinished. The discovery workflow is not a finished ingestion system.
-- Deployment of this update: pending at documentation commit; consult the final session response and Sites deployment status.
-
-### Deployment and first automation run
-
-Version 7 deployed successfully on 2026-09-10 from Sites commit `609dd2b2ef8d25b7f510c3ba90cb1b8f136aea34`, matching GitHub code commit `3af040758949c881f5e841c6362e2e6588fd791f`. The site is live at the URL above. Direct live HTTP validation was unavailable from this runtime.
-
-GitHub discovery run `34492002323` executed, but the search response did not contain `response`. The first query's leading wildcard license clauses were replaced with explicit quoted license URLs and error reporting improved. Re-run result must be checked; not yet a successful discovery run.
-
-### Latest checked state
-
-- Corrected GitHub discovery run: https://github.com/shadratalmn7-sudo/cineyah/actions/runs/34492224567 — started successfully and still in progress at the final documentation check. Do not treat its 1,000-candidate setting as a completed result.
-- GitHub preservation and source tree equality verified. Last verified code/automation commit before final documentation: `b3a0185f18738e6e969eb48e140326b6ba46fac7`.
-- English preview tested: document language `en`, direction `ltr`, duration `1h 37m`; Arabic remains `1 ساعة و37 دقيقة`. Cases 90, 120 and 142 minutes and unique catalog identifiers passed direct checks.
-- The public catalog remains one movie without licensed subtitles, and cloud-browser playback returned the source error state. No additional film was published.
-
-## Genre and series update
-
-- Owner changed the empty-genre rule: show all 19 genres in both Movies and Series. Genre grids now wrap so every category is visible; movie and series results remain isolated.
-- Series is presented as a normal section, with only “لا توجد مسلسلات متاحة حاليًا.” No technical readiness or licensing explanation in the empty state.
-- Discovery run 34492224567 completed successfully: 986 distinct candidate records, 983 with video files, zero discovery-level errors. Of the records, 27 have a reported media length of at least 5,400 seconds; this does not establish feature-film classification or rights. The rest mostly include shorts, tutorials, broadcasts and other non-feature material. No new movie qualified for publication.
-- Discovery query now restricts results to feature-film collection/title/subject signals. This prioritizes candidates but never grants publication rights.
-- Current published catalog remains 1 movie, 0 series. Existing film includes poster, bilingual synopsis and permanent details route.
-
-## Latest production priority
-
-Version 8 successfully published: all 19 genres visible in both sections; series empty message simplified. GitHub code SHA `6e93856b6675eaf7d4b203bb819ba6706bca196f`, Sites SHA `29ea77d250c2d3b552e04a222f19af782c6b0c96`. Browser checks passed genre visibility, horror empty state and Movies/Series isolation.
-
-Owner now prioritizes 100 supernatural horror films first, then 100 per genre. Horror publication count remains 0. `CONTENT_ROADMAP.md` and the discovery query reflect this order.
-
-## Horror batch 001 — reviewed
-
-GitHub run 34496939963 completed successfully and yielded 32 candidate records. None qualifies for publication on the available evidence. Per-item blocker records are in `content/horror-batch-001-review.json`. Some have sub-90-minute media; one explicitly labels excluded erotic/NSFW content; others lack independently verified streaming authority and often verified release dates. A host CC tag is not evidence that the uploader owns studio films. Published horror remains 0/100. Do not reclassify discovery success as publication success or silently relax content constraints.
-
-## Genre disclosure update
-- All 19 genres now sit beneath a collapsible Genres / التصنيفات control in Movies and Series.
-- The list is initially closed, expands downward, and shows the selected genre in the trigger.
-- Verified in preview: opening, filtering Horror, switching to Series without movie results, and closing the list. Production build passed.
+Start from current GitHub `main`, do not restore any retired overlay or Ulises auto-repair workflow, deploy that exact revision to the configured ChatGPT Sites project, verify AR/EN movie routes on the live host, then run real iPhone/Safari QA. Only after a legal playback source passes that QA should any Watch button be enabled for Ulises or the Horror catalog.
