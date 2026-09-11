@@ -35,15 +35,17 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-      - name: Revalidate existing comedy batch
-        id: revalidate
-        continue-on-error: true
-        run: python scripts/verify-existing-comedy.py
-      - name: Targeted repair of invalid or stale entries
-        if: steps.revalidate.outcome != 'success'
-        run: python scripts/repair-comedy-batch.py
-      - name: Revalidate exactly 100 browser-playable comedy features
-        run: python scripts/verify-existing-comedy.py
+      - name: Repair and revalidate until exactly 100 pass
+        run: |
+          set -e
+          for attempt in 1 2 3; do
+            echo "verification attempt $attempt"
+            if python scripts/verify-existing-comedy.py; then
+              exit 0
+            fi
+            python scripts/repair-comedy-batch.py
+          done
+          python scripts/verify-existing-comedy.py
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.19.0
       - name: Install app dependencies
