@@ -4,7 +4,7 @@ import { sitePath } from "@/lib/site-path";
 
 export const dynamic = "force-static";
 
-const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah-movies.netlify.app";
+const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah.shadrat-almn7.chatgpt.site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return ["ar", "en"].flatMap(locale => [

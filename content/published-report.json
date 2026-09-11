@@ -1,0 +1,47 @@
+{
+  "verificationDate": "2026-09-11",
+  "netPublishedMovies": 1,
+  "mainGenreCounts": {
+    "horror": 0,
+    "thriller": 0,
+    "action": 0,
+    "crime": 0,
+    "romance": 0,
+    "comedy": 0,
+    "drama": 1,
+    "scifi": 0,
+    "fantasy": 0,
+    "mystery": 0,
+    "adventure": 0,
+    "animation": 0,
+    "otherFiction": 0
+  },
+  "arabicSubtitles": {
+    "officialOrAlreadyLicensed": 0,
+    "createdByCineyah": 1,
+    "withoutArabicAndNotPublished": 0
+  },
+  "quality": {
+    "720p": 0,
+    "1080p": 0,
+    "4k": 0,
+    "below720p": 1
+  },
+  "licenses": {
+    "ccBy": 0,
+    "ccBySa": 1,
+    "cc0OrPublicDomain": 0,
+    "otherCommercialFriendly": 0
+  },
+  "playbackEvidence": {
+    "format": "H.264/AAC MP4",
+    "dimensions": "854x480",
+    "durationSeconds": 5586,
+    "audio": "AAC stereo 48 kHz",
+    "byteRange": "HTTP 206 verified",
+    "cors": "Access-Control-Allow-Origin: *",
+    "browser": "Chrome desktop: metadata, play, pause, start/end seek and Arabic track verified",
+    "safari": "Codec/container/range/playsInline are Safari-compatible; no Safari runtime was available in the test environment"
+  },
+  "remainingPlaybackProblems": []
+}

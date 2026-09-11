@@ -1,21 +1,10 @@
 import { movieCatalog, type Movie } from "@/lib/catalog";
-import { curatedFreeMovies } from "@/lib/free-movies";
-import { generatedFreeMovies } from "@/lib/generated-free-movies";
 
-const allMovies: Movie[] = [...movieCatalog, ...curatedFreeMovies, ...generatedFreeMovies];
-
-const pipelineVerifiedIds = allMovies
-  .filter(movie => movie.sources.length > 0)
-  .filter(movie => movie.rightsStatusEn === "Playback and commercial-use source verified by Cineyah pipeline.")
-  .filter(movie => ["CC BY 2.0","CC BY 2.5","CC BY 3.0","CC BY 4.0","CC BY-SA 2.0","CC BY-SA 2.5","CC BY-SA 3.0","CC BY-SA 4.0","CC0 1.0"].includes(movie.licenseName ?? ""))
-  .map(movie => movie.id);
-
-// A title is public only after exact-source playback checks. Curated ids are reviewed
-// manually; pipeline ids are produced only after license, fiction, duration, codec,
-// audio and byte-range checks succeed.
+// A movie is never public merely because metadata or a URL exists.
+// Add an id only after Cineyah verifies the exact source and records the
+// completed browser matrix (including any unavailable runtime) in the report.
 const verifiedPlayableMovieIds = new Set<string>([
-  "pendatang-2023",
-  ...pipelineVerifiedIds,
+  "valkaama-2010",
 ]);
 
 function isRealArtwork(value?: string) {
@@ -32,11 +21,16 @@ export function isPublicMovie(movie: Movie) {
     && movie.runtimeMinutes >= 60
     && verifiedPlayableMovieIds.has(movie.id)
     && movie.sources.length > 0
+    && movie.sources.every(source => source.url.startsWith("https://") && source.mimeType === "video/mp4")
+    && movie.subtitles.some(subtitle => subtitle.lang === "ar" && subtitle.url.endsWith(".vtt"))
+    && movie.commercialUseAllowed
+    && movie.derivativesAllowed
+    && Boolean(movie.licenseUrl && movie.contentSourceUrl && movie.originalSourceUrl && movie.verificationDate)
     && isRealArtwork(movie.poster)
     && isRealArtwork(movie.backdrop);
 }
 
-export const publicMovies = allMovies.filter(isPublicMovie);
+export const publicMovies = movieCatalog.filter(isPublicMovie);
 export const playableMovies = publicMovies;
 export const discoverableMovies = publicMovies;
 
@@ -60,10 +54,10 @@ export function getSimilarMovies(movie: Movie, limit = 6) {
 }
 
 export function getYouMayAlsoLike(movie: Movie, limit = 6) {
-  const similarIds=new Set(getSimilarMovies(movie,limit).map(item=>item.id));
-  const pool=publicMovies.filter(candidate=>candidate.id!==movie.id&&!similarIds.has(candidate.id));
-  const seed=[...movie.id].reduce((sum,char)=>sum+char.charCodeAt(0),0);
+  const similarIds = new Set(getSimilarMovies(movie, limit).map(item => item.id));
+  const pool = publicMovies.filter(candidate => candidate.id !== movie.id && !similarIds.has(candidate.id));
+  const seed = [...movie.id].reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return [...pool]
-    .sort((a,b)=>((a.year+seed)%97)-((b.year+seed)%97)||a.titleEn.localeCompare(b.titleEn))
-    .slice(0,limit);
+    .sort((a, b) => ((a.year + seed) % 97) - ((b.year + seed) % 97) || a.titleEn.localeCompare(b.titleEn))
+    .slice(0, limit);
 }

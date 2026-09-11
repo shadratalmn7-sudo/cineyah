@@ -10,6 +10,8 @@ const route=read("app/[locale]/movies/[id]/page.tsx");
 const localeRoute=read("app/[locale]/page.tsx");
 const sitemap=read("app/sitemap.ts");
 const nextConfig=read("next.config.ts");
+const publishedReport=JSON.parse(read("content/published-report.json"));
+const reviewCandidates=JSON.parse(read("content/review-candidates.json"));
 
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 const runtimes=[...catalog.matchAll(/runtimeMinutes[":]*\s*:?\s*(\d+)/g)].map(match=>Number(match[1]));
@@ -17,9 +19,15 @@ assert(runtimes.length>=1,"No movies found in catalog");
 assert(runtimes.every(minutes=>minutes>=60),`Movie catalog contains runtime below 60 minutes: ${runtimes.filter(minutes=>minutes<60).join(", ")}`);
 const genreUnion=catalog.match(/export type Genre = ([^;]+);/)?.[1]??"";
 assert((genreUnion.match(/\|/g)||[]).length+1===19,"Genre union must contain exactly 19 genres");
+assert(new Set([...catalog.matchAll(/id:"([^"]+)"/g)].map(match=>match[1])).size===runtimes.length,"Movie IDs must be unique");
 assert(publicCatalog.includes("verifiedPlayableMovieIds"),"Public catalog must require explicit playback verification");
 assert(publicCatalog.includes("verifiedPlayableMovieIds.has(movie.id)"),"Public catalog must gate every title by verified playback id");
 assert(publicCatalog.includes("movie.sources.length > 0"),"Public catalog must require a real playback source");
+assert(publicCatalog.includes("movie.year >= 2000"),"Public catalog must reject pre-2000 titles");
+assert(publicCatalog.includes("movie.runtimeMinutes >= 60"),"Public catalog must require feature runtime");
+assert(publicCatalog.includes("movie.commercialUseAllowed"),"Public catalog must require commercial-use permission");
+assert(publicCatalog.includes("movie.derivativesAllowed"),"Public catalog must require derivative permission for Cineyah subtitles");
+assert(publicCatalog.includes('subtitle.lang === "ar"'),"Public catalog must require an Arabic subtitle track");
 assert(publicCatalog.includes("isRealArtwork(movie.poster)"),"Public catalog must require a real poster");
 assert(publicCatalog.includes("isRealArtwork(movie.backdrop)"),"Public catalog must require a real backdrop");
 assert(publicCatalog.includes('asset.startsWith("data:")'),"Generated data-image placeholders must not count as artwork");
@@ -31,6 +39,8 @@ assert(!home.includes("setSelected")&&!home.includes("modal-backdrop")&&!home.in
 assert(!legacy.includes("setSelected")&&!legacy.includes("watching")&&!legacy.includes("modal-backdrop"),"Legacy CineyahApp still contains overlay logic");
 assert(home.includes("لا توجد مسلسلات متاحة حاليًا."),"Series accepted-empty message is missing");
 assert(home.includes("التصنيفات")&&home.includes("Genres"),"Genres disclosure is missing");
+assert(home.includes("playableMovies.flatMap"),"Genre menu must be derived from non-empty public genres");
+assert(home.includes("visibleCount")&&home.includes("Load more"),"Scalable catalog pagination is missing");
 assert(detail.includes("playsInline")&&detail.includes("controls"),"Native HTML5 player requirements missing");
 assert(!detail.includes("crossOrigin"),"Player must not force crossOrigin");
 assert(!detail.toLowerCase().includes("youtube")&&!detail.includes("<iframe"),"Player must not use YouTube or iframe playback");
@@ -50,4 +60,13 @@ assert(sitemap.includes('from "@/lib/public-catalog"'),"Sitemap must only expose
 assert(localeRoute.includes("generateStaticParams"),"Locale routes must be statically enumerated for static export");
 assert(nextConfig.includes('output: "export"')&&nextConfig.includes('basePath'),"Static export mode is missing");
 assert(route.includes("alternates")&&route.includes("languages")&&route.includes('"@type":"Movie"'),"Movie SEO metadata/structured data missing");
-console.log(JSON.stringify({movies:runtimes.length,minRuntime:Math.min(...runtimes),strictPublicGate:true,homePlayableOnly:true,publicRightsUi:false,noYouTubePlayer:true,hostingAwareRoutes:true},null,2));
+for(const track of ["public/subtitles/valkaama-ar.vtt","public/subtitles/valkaama-en.vtt"]){
+  const text=read(track);
+  assert(text.startsWith("WEBVTT"),`${track} is not WebVTT`);
+  assert((text.match(/-->/g)||[]).length===705,`${track} must contain all 705 cues`);
+}
+assert(Object.values(publishedReport.mainGenreCounts).reduce((sum,value)=>sum+value,0)===publishedReport.netPublishedMovies,"Main-genre counts must equal the net total");
+assert(publishedReport.netPublishedMovies===1,"Published report must match the explicit public gate");
+assert(reviewCandidates.rejectedCount===reviewCandidates.rejected.length,"Rejected candidate count is inconsistent");
+assert(new Set(reviewCandidates.rejected.map(item=>item.id)).size===reviewCandidates.rejected.length,"Rejected candidate IDs must be unique");
+console.log(JSON.stringify({movies:runtimes.length,minRuntime:Math.min(...runtimes),strictPublicGate:true,arabicCueCount:705,homePlayableOnly:true,publicRightsUi:false,noYouTubePlayer:true,hostingAwareRoutes:true},null,2));

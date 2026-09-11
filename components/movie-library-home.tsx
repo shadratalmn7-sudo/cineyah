@@ -16,6 +16,7 @@ export default function MovieLibraryHome({locale}:{locale:Locale}){
   const [contentType,setContentType]=useState<ContentType>("movie");
   const [query,setQuery]=useState("");
   const [genre,setGenre]=useState<Genre|null>(null);
+  const [visibleCount,setVisibleCount]=useState(24);
   const hero=playableMovies[0];
   const movies=useMemo(()=>{
     const needle=query.trim().toLowerCase();
@@ -24,7 +25,8 @@ export default function MovieLibraryHome({locale}:{locale:Locale}){
       return matchesQuery&&(!genre||movie.genres.includes(genre));
     });
   },[query,genre]);
-  const genres=Object.keys(genreLabels) as Genre[];
+  const genres=useMemo(()=>Array.from(new Set(playableMovies.flatMap(movie=>movie.genres))) as Genre[],[]);
+  const visibleMovies=movies.slice(0,visibleCount);
 
   return <div className={styles.page} dir={rtl?"rtl":"ltr"}>
     <header className={styles.nav}>
@@ -56,25 +58,26 @@ export default function MovieLibraryHome({locale}:{locale:Locale}){
       {contentType==="series"?<section className={styles.emptySeries}><span>SERIES</span><h1>{rtl?"المسلسلات":"Series"}</h1><p>{rtl?"لا توجد مسلسلات متاحة حاليًا.":"No series are currently available."}</p></section>:<>
         <section className={styles.intro}>
           <div><span>CINEYAH</span><h2>{rtl?"مكتبة الأفلام":"Movie Library"}</h2></div>
-          <p>{rtl?"اختر الفيلم الذي تريد مشاهدته أو استخدم البحث والتصنيفات للوصول إليه بسرعة.":"Choose a movie to watch, or use search and genres to find it quickly."}</p>
+          <p>{rtl?"كل فيلم هنا اجتاز فحص الترخيص التجاري والفيلم الكامل والتشغيل والترجمة العربية.":"Every title here passed commercial-licence, full-feature, playback and Arabic-subtitle checks."}</p>
         </section>
 
-        <div className={styles.search}><Search/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder={rtl?"ابحث عن فيلم...":"Search movies..."}/></div>
+        <div className={styles.search}><Search/><input value={query} onChange={event=>{setQuery(event.target.value);setVisibleCount(24)}} placeholder={rtl?"ابحث عن فيلم...":"Search movies..."}/></div>
 
         <details className={styles.genreDisclosure}>
-          <summary><span>{rtl?"التصنيفات":"Genres"}</span><small>{genre?genreLabels[genre][locale]:(rtl?"كل التصنيفات الـ19":"All 19 genres")}</small><ChevronDown/></summary>
+          <summary><span>{rtl?"التصنيفات":"Genres"}</span><small>{genre?genreLabels[genre][locale]:(rtl?`كل التصنيفات (${genres.length})`:`All genres (${genres.length})`)}</small><ChevronDown/></summary>
           <div className={styles.genres}>
-            <button className={!genre?styles.active:""} onClick={()=>setGenre(null)}>{rtl?"الكل":"All"}</button>
-            {genres.map(item=><button key={item} className={genre===item?styles.active:""} onClick={()=>setGenre(item)}>{genreLabels[item][locale]}</button>)}
+            <button className={!genre?styles.active:""} onClick={()=>{setGenre(null);setVisibleCount(24)}}>{rtl?"الكل":"All"}</button>
+            {genres.map(item=><button key={item} className={genre===item?styles.active:""} onClick={()=>{setGenre(item);setVisibleCount(24)}}>{genreLabels[item][locale]}</button>)}
           </div>
         </details>
 
         <section className={styles.grid} aria-label={rtl?"الأفلام":"Movies"}>
-          {movies.map(movie=><a className={styles.card} key={movie.id} href={sitePath(`/${locale}/movies/${movie.id}/`)}>
+          {visibleMovies.map(movie=><a className={styles.card} key={movie.id} href={sitePath(`/${locale}/movies/${movie.id}/`)}>
             <div className={styles.poster}><img src={sitePath(movie.poster)} alt={`${movie.titleEn}${movie.titleAr?` — ${movie.titleAr}`:""}`} loading="lazy"/><div className={styles.cardAction}><Play fill="currentColor"/></div></div>
             <div className={styles.copy}><h2>{movieTitle(movie,locale)}</h2>{movie.titleOriginal&&movie.titleOriginal!==movieTitle(movie,locale)&&<p className={styles.alt}>{movie.titleOriginal}</p>}<p>{movie.year} · {formatDuration(movie.runtimeMinutes,locale)}</p></div>
           </a>)}
         </section>
+        {visibleCount<movies.length&&<button className={styles.primary} onClick={()=>setVisibleCount(count=>count+24)}>{rtl?"عرض المزيد":"Load more"}</button>}
         {movies.length===0&&<p className={styles.empty}>{rtl?"لا توجد أفلام جاهزة للمشاهدة حاليًا.":"No movies are ready to watch right now."}</p>}
       </>}
     </main>

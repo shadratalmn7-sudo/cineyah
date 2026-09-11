@@ -6,7 +6,7 @@ import { publicMovies } from "@/lib/public-catalog";
 import { sitePath } from "@/lib/site-path";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
-const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah-movies.netlify.app";
+const origin = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "https://cineyah.shadrat-almn7.chatgpt.site";
 
 export function generateStaticParams(){
   return ["ar","en"].flatMap(locale=>publicMovies.map(movie=>({locale,id:movie.id})));

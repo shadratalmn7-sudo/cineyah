@@ -20,8 +20,6 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
   const source=movie.sources[sourceIndex];
 
   useEffect(()=>{
-    setError(null);
-    setLoading(true);
     const timer=window.setTimeout(()=>{
       const video=videoRef.current;
       if(video&&video.readyState<2)setError(locale==="ar"?"الفيديو لم يصبح جاهزًا بعد. جرّب مرة أخرى.":"The video did not become ready. Please retry.");
@@ -38,7 +36,7 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
   if(!source)return null;
 
   const failSource=()=>{
-    if(sourceIndex<movie.sources.length-1){setSourceIndex(index=>index+1);return;}
+    if(sourceIndex<movie.sources.length-1){setError(null);setLoading(true);setSourceIndex(index=>index+1);return;}
     setLoading(false);
     setError(locale==="ar"?"تعذر تشغيل الفيديو الآن.":"The video could not be played right now.");
   };
@@ -65,7 +63,7 @@ function NativeMoviePlayer({movie,locale,onClose}:{movie:Movie;locale:Locale;onC
         {loading&&!error&&<div className={styles.loading}>{locale==="ar"?"جارٍ تجهيز الفيديو…":"Preparing video…"}</div>}
         {error&&<div className={styles.playerError} role="alert"><strong>{locale==="ar"?"تعذر التشغيل":"Playback failed"}</strong><p>{error}</p><button onClick={()=>{setError(null);setLoading(true);videoRef.current?.load()}}>{locale==="ar"?"إعادة المحاولة":"Retry"}</button></div>}
       </div>
-      {movie.sources.length>1&&<div className={styles.qualityRow}>{movie.sources.map((item,index)=><button key={`${item.label}-${item.url}`} className={index===sourceIndex?styles.activeQuality:""} onClick={()=>setSourceIndex(index)}>{item.label}</button>)}</div>}
+      {movie.sources.length>1&&<div className={styles.qualityRow}>{movie.sources.map((item,index)=><button key={`${item.label}-${item.url}`} className={index===sourceIndex?styles.activeQuality:""} onClick={()=>{setError(null);setLoading(true);setSourceIndex(index)}}>{item.label}</button>)}</div>}
     </div>
   </div>;
 }
