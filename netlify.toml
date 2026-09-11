@@ -4,7 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "22.13.0"
-  PNPM_VERSION = "11.19.0"
+  PNPM_FLAGS = "--shamefully-hoist"
   STATIC_EXPORT = "true"
   NEXT_PUBLIC_SITE_BASE_PATH = ""
   NEXT_PUBLIC_SITE_ORIGIN = "https://cineyah-movies.netlify.app"
