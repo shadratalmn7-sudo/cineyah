@@ -5,7 +5,6 @@ import json
 import pathlib
 import re
 import subprocess
-import sys
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CAT=ROOT/'content/generated-comedy.json'
@@ -15,9 +14,11 @@ BAD_TERMS=(
     'trailer','teaser','clip','short film','episode','compilation','collection','box set','boxset',
     'marathon','gameplay','walkthrough','commercials','podcast','radio show','festival','concert',
     'complete series','full season','playlist','bumper','bumpers','dvd iso','blu-ray iso','documentary',
-    'talk show','music video','video essay','fan edit','behind the scenes','making of','recording',
+    'talk show','variety show','music video','video essay','fan edit','behind the scenes','making of','recording',
     'recordings','reccording','reccordings','livestream','live stream','double feature','two movies',
-    'tv recordings','television recordings','cctv','channel bumpers'
+    'tv recordings','television recordings','cctv','channel bumpers','the johnny cash show',
+    'plays minecraft','gamertag','moviemax comedy','casados con hijos','video #','dead and buried treasures',
+    'may 19th, 2024','covid 19 plan','plandemic','sing-along edition','extended cut','anniversary edition'
 )
 
 def norm(s):
@@ -32,7 +33,7 @@ def verify_one(movie):
         sources=movie.get('sources') or []
         if not sources or not str(sources[0].get('url','')).startswith('https://'): return (False,title,'source')
         url=sources[0]['url']
-        p=subprocess.run(['ffprobe','-v','error','-rw_timeout','15000000','-show_entries','format=duration:stream=codec_name,codec_type','-of','json',url],capture_output=True,text=True,timeout=28)
+        p=subprocess.run(['ffprobe','-v','error','-rw_timeout','25000000','-show_entries','format=duration:stream=codec_name,codec_type','-of','json',url],capture_output=True,text=True,timeout=45)
         if p.returncode: return (False,title,'ffprobe')
         data=json.loads(p.stdout or '{}')
         duration=float(data.get('format',{}).get('duration') or 0)
@@ -43,7 +44,7 @@ def verify_one(movie):
         if audio and audio[0] not in {'aac','mp3'}: return (False,title,f'audio:{audio[:1]}')
         if not 5400 <= duration <= 12600: return (False,title,f'duration:{duration}')
         sample=min(max(30,duration*.2),duration-5)
-        q=subprocess.run(['ffmpeg','-v','error','-rw_timeout','15000000','-ss',str(sample),'-i',url,'-t','1','-map','0:v:0','-f','null','-'],capture_output=True,text=True,timeout=28)
+        q=subprocess.run(['ffmpeg','-v','error','-rw_timeout','25000000','-ss',str(sample),'-i',url,'-t','1','-map','0:v:0','-f','null','-'],capture_output=True,text=True,timeout=45)
         if q.returncode: return (False,title,'decode')
         return (True,title,duration)
     except Exception as e:
@@ -55,7 +56,7 @@ def main():
     keys=[norm(x.get('titleEn','')) for x in movies]
     if any(not k for k in keys) or len(set(keys))!=TARGET: raise SystemExit('titles are not exactly 100 distinct normalized titles')
     offenders=[x.get('titleEn','') for x in movies if any(t in str(x.get('titleEn','')).lower() for t in BAD_TERMS)]
-    if offenders: raise SystemExit(f'non-feature packaging/recording titles remain: {offenders[:10]}')
+    if offenders: raise SystemExit(f'non-feature packaging/recording titles remain: {offenders[:20]}')
     print(json.dumps({'stage':'verify-existing','count':len(movies)}),flush=True)
     results=[]
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
@@ -67,7 +68,7 @@ def main():
     if bad:
         print(json.dumps({'failed':len(bad),'examples':bad[:20]}),flush=True)
         raise SystemExit(f'{len(bad)} of 100 sources failed current browser-compatibility verification')
-    report={'target':TARGET,'verified':TARGET,'distinct':TARGET,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'method':'revalidated existing batch: feature-title gate + ffprobe H.264/AAC-or-MP3 duration gate + real ffmpeg decode sample for all 100'}
+    report={'target':TARGET,'verified':TARGET,'distinct':TARGET,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'method':'revalidated existing batch: strict feature-title gate + ffprobe H.264/AAC-or-MP3 duration gate + real ffmpeg decode sample for all 100'}
     REPORT.write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report),flush=True)
 
