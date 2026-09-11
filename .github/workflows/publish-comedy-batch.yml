@@ -39,6 +39,19 @@ jobs:
         id: revalidate
         continue-on-error: true
         run: python scripts/verify-existing-comedy.py
+      - name: Harden discovery for Archive rate limits
+        if: steps.revalidate.outcome != 'success'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/build-comedy-catalog.py')
+          s=p.read_text()
+          s=s.replace('PREQUALIFIED_TARGET = 320','PREQUALIFIED_TARGET = 160')
+          s=s.replace('SEARCH_LIMIT = 3600','SEARCH_LIMIT = 5000')
+          s=s.replace('max_workers=72','max_workers=8')
+          s=s.replace('max_workers=28','max_workers=12')
+          p.write_text(s)
+          PY
       - name: Rebuild exact batch when any source is stale
         if: steps.revalidate.outcome != 'success'
         run: python scripts/build-comedy-catalog.py
@@ -50,17 +63,27 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Production build
         run: pnpm build
-      - name: Verify exactly 100 distinct features
+      - name: Verify exactly 100 distinct feature films
         run: |
           python - <<'PY'
           import json,re
           p=json.load(open('content/generated-comedy.json'))
           norm=lambda s: re.sub(r'[^a-z0-9]+',' ',s.lower()).strip()
+          bad=(
+            'trailer','teaser','clip','short film','episode','compilation','collection','box set','boxset',
+            'marathon','gameplay','walkthrough','commercials','podcast','radio show','festival','concert',
+            'complete series','full season','playlist','bumper','bumpers','dvd iso','blu-ray iso','documentary',
+            'talk show','music video','video essay','fan edit','behind the scenes','making of','recording',
+            'recordings','reccording','reccordings','livestream','live stream','double feature','two movies',
+            'tv recordings','television recordings','cctv','channel bumpers'
+          )
           assert len(p)==100
           assert len({norm(x['titleEn']) for x in p})==100
           assert all('comedy' in x['genres'] for x in p)
           assert all(90 <= x['runtimeMinutes'] <= 210 for x in p)
           assert all(x['sources'] and x['sources'][0]['url'].startswith('https://') for x in p)
+          offenders=[x['titleEn'] for x in p if any(t in x['titleEn'].lower() for t in bad)]
+          assert not offenders, f'non-feature packaging/recording titles remain: {offenders[:10]}'
           r=json.load(open('content/comedy-batch-report.json'))
           assert r['verified']==r['distinct']==r['target']==100
           print('verified exactly 100 distinct playback-tested comedy feature films')
