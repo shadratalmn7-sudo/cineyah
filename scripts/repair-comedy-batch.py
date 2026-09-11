@@ -23,8 +23,6 @@ BAD_TERMS=(
     'may 19th, 2024','covid 19 plan','plandemic','sing-along edition','extended cut','anniversary edition'
 )
 
-def norm(s): return re.sub(r'[^a-z0-9]+',' ',str(s).lower()).strip()
-
 def load_builder():
     p=ROOT/'scripts/build-comedy-catalog.py'
     spec=importlib.util.spec_from_file_location('comedy_builder',p)
@@ -32,6 +30,15 @@ def load_builder():
     return m
 
 B=load_builder()
+
+def norm(s):
+    return B.norm(str(s or ''))
+
+def source_key(movie):
+    try:
+        return str((movie.get('sources') or [{}])[0].get('url','')).strip().lower()
+    except Exception:
+        return ''
 
 def valid_title(movie):
     t=str(movie.get('titleEn') or '')
@@ -42,11 +49,11 @@ def reverify(movie):
         if movie.get('type')!='movie' or 'comedy' not in movie.get('genres',[]): return None
         if not valid_title(movie): return None
         if not 90 <= int(movie.get('runtimeMinutes',0)) <= 210: return None
-        src=(movie.get('sources') or [{}])[0].get('url','')
-        if not str(src).startswith('https://'): return None
+        src=source_key(movie)
+        if not src.startswith('https://'): return None
         d=B.probe_and_decode(src)
         if not d: return None
-        movie=dict(movie); movie['runtimeMinutes']=int(round(d/60))
+        movie=dict(movie); movie['runtimeMinutes']=int(round(d/60)); movie['_verifiedDurationSeconds']=float(d)
         return movie
     except Exception:
         return None
@@ -81,19 +88,28 @@ def expanded_ids(base_ids):
 
 def main():
     existing=json.loads(CAT.read_text(encoding='utf-8'))
-    dedup={}; ordered=[]
+    # First collapse records that are obviously the same film by canonicalized title or exact media URL.
+    dedup=[]; seed_titles=set(); seed_sources=set()
     for m in existing:
-        k=norm(m.get('titleEn',''))
-        if k and k not in dedup:
-            dedup[k]=m; ordered.append(m)
-    kept=[]
+        k=norm(m.get('titleEn','')); sk=source_key(m)
+        if not k or not sk or k in seed_titles or sk in seed_sources: continue
+        seed_titles.add(k); seed_sources.add(sk); dedup.append(m)
+
+    verified=[]
     with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
-        futs=[pool.submit(reverify,m) for m in ordered]
+        futs=[pool.submit(reverify,m) for m in dedup]
         for i,f in enumerate(concurrent.futures.as_completed(futs),1):
             x=f.result()
-            if x: kept.append(x)
-            if i%10==0: print(json.dumps({'stage':'reverify-seed','checked':i,'kept':len(kept)}),flush=True)
-    seen={norm(x['titleEn']) for x in kept}
+            if x: verified.append(x)
+            if i%10==0: print(json.dumps({'stage':'reverify-seed','checked':i,'verified':len(verified)}),flush=True)
+
+    # A distinct-film batch must not contain the same exact playable media under multiple upload titles.
+    kept=[]; seen_titles=set(); seen_sources=set(); seen_durations=set()
+    for x in verified:
+        k=norm(x['titleEn']); sk=source_key(x); dk=round(float(x.get('_verifiedDurationSeconds') or 0),2)
+        if not k or not sk or not dk or k in seen_titles or sk in seen_sources or dk in seen_durations: continue
+        seen_titles.add(k); seen_sources.add(sk); seen_durations.add(dk); kept.append(x)
+
     ids=expanded_ids(B.discover_ids())
     print(json.dumps({'stage':'repair-discovery','candidates':len(ids),'seedKept':len(kept),'need':TARGET-len(kept)}),flush=True)
     scanned=0
@@ -106,26 +122,34 @@ def main():
         for c in pre:
             if not c: continue
             k=norm(c.get('title',''))
-            if not k or k in seen or any(x in c.get('title','').lower() for x in BAD_TERMS): continue
+            if not k or k in seen_titles or any(x in c.get('title','').lower() for x in BAD_TERMS): continue
             candidates.append(c)
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
             for x in pool.map(B.verify,candidates):
                 if not x: continue
-                k=norm(x['titleEn'])
-                if not k or k in seen or any(t in x['titleEn'].lower() for t in BAD_TERMS): continue
+                k=norm(x['titleEn']); sk=source_key(x)
+                if not k or not sk or k in seen_titles or sk in seen_sources or any(t in x['titleEn'].lower() for t in BAD_TERMS): continue
                 if not 90 <= x['runtimeMinutes'] <= 210: continue
-                seen.add(k); kept.append(x)
+                duration=B.probe_and_decode(sk)
+                if not duration: continue
+                dk=round(float(duration),2)
+                if dk in seen_durations: continue
+                x['_verifiedDurationSeconds']=float(duration)
+                seen_titles.add(k); seen_sources.add(sk); seen_durations.add(dk); kept.append(x)
                 print(json.dumps({'stage':'replacement','count':len(kept),'title':x['titleEn']}),flush=True)
                 if len(kept)>=TARGET: break
         scanned+=len(chunk)
         print(json.dumps({'stage':'repair-scan','scanned':scanned,'count':len(kept)}),flush=True)
         time.sleep(0.5)
-    if len(kept)<TARGET: raise SystemExit(f'Only {len(kept)} playback-verified feature comedies after targeted repair')
+    if len(kept)<TARGET: raise SystemExit(f'Only {len(kept)} playback-verified distinct feature comedies after targeted repair')
     out=kept[:TARGET]
-    assert len(out)==TARGET and len({norm(x['titleEn']) for x in out})==TARGET
+    for x in out: x.pop('_verifiedDurationSeconds',None)
+    assert len(out)==TARGET
+    assert len({norm(x['titleEn']) for x in out})==TARGET
+    assert len({source_key(x) for x in out})==TARGET
     assert all(valid_title(x) for x in out)
     CAT.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    report={'target':100,'verified':100,'distinct':100,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'method':'targeted repair: strict feature-title gate + expanded open-license feature-film discovery + ffprobe H.264/AAC-or-MP3 duration and ffmpeg decode checks'}
+    report={'target':100,'verified':100,'distinct':100,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'method':'targeted repair: canonical-title + unique-source + media-duration dedupe, strict feature-title gate, open-license discovery, ffprobe H.264/AAC-or-MP3 duration and ffmpeg decode checks'}
     REPORT.write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report),flush=True)
 
