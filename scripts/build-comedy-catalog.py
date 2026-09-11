@@ -91,10 +91,16 @@ def source_rank(f):
     return score
 
 def looks_candidate(info,title,description,subjects,files):
-    low=f"{title} {description} {' '.join(subjects)}".lower()
-    if any(x in low for x in BAD_TERMS):return False
+    # Archive descriptions routinely contain words such as "collection" and
+    # "recording" even for legitimate feature films. Reject packaging/episode
+    # markers from the title, while using description/subjects only for genre.
+    title_low=title.lower()
+    genre_low=f"{title} {description} {' '.join(subjects)}".lower()
+    if any(x in title_low for x in BAD_TERMS):return False
     if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*[2-9]\d*)\b",title,re.I):return False
-    if not any(x in low for x in COMEDY_TERMS):return False
+    if not any(x in genre_low for x in COMEDY_TERMS):return False
+    # Runtime is the hard short-form gate. Metadata lengths are accepted only
+    # in the feature range; missing lengths are measured later with ffprobe.
     media=[f for f in files if str(f.get("name","")).lower().endswith(".mp4")]
     if not media:return False
     measured=[reported(f) for f in media if reported(f)>0]
@@ -131,7 +137,6 @@ def probe_and_decode(url):
         if audio and audio[0] not in {"aac","mp3"}:return None
         duration=float(d.get("format",{}).get("duration") or 0)
         if not 5400<=duration<=12600:return None
-        # Decode a real sample, not just container metadata.
         sample=min(max(30,duration*0.2),duration-5)
         q=subprocess.run(["ffmpeg","-v","error","-rw_timeout","10000000","-ss",str(sample),"-i",url,"-t","1","-map","0:v:0","-f","null","-"],capture_output=True,text=True,timeout=18)
         if q.returncode:return None
