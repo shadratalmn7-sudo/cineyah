@@ -229,13 +229,18 @@ def inspect(identifier):
 
 
 def discover_ids():
-    license_q = " OR ".join(f'\"{x}\"' for x in LICENSES)
-    terms = " OR ".join(COMEDY_TERMS)
+    # Discover broadly, then apply the strict license / feature / comedy / runtime / codec gates in inspect().
+    # This avoids Archive.org advanced-search quirks where exact licenseurl filters hide otherwise valid items.
     queries = [
-        'mediatype:movies AND licenseurl:(' + license_q + ') AND collection:(feature_films OR featurefilms OR moviesandfilms) AND (subject:(' + terms + ') OR title:(' + terms + '))',
-        'mediatype:movies AND licenseurl:(' + license_q + ') AND (title:("full movie" OR "full film" OR "feature film") OR subject:("feature film" OR "feature films")) AND (subject:(' + terms + ') OR title:(' + terms + '))',
+        'mediatype:movies AND (subject:comedy OR title:comedy)',
+        'mediatype:movies AND (subject:"romantic comedy" OR title:"romantic comedy")',
+        'mediatype:movies AND (subject:slapstick OR title:slapstick OR subject:farce OR title:farce)',
+        'mediatype:movies AND (subject:humor OR subject:humour OR title:humor OR title:humour)',
+        'mediatype:movies AND (subject:satire OR title:satire)',
+        'mediatype:movies AND (title:"full movie" OR title:"full film" OR subject:"feature film" OR subject:"feature films") AND (comedy OR comedic)',
     ]
     ids = []
+    seen = set()
     for query in queries:
         for page in range(1, 101):
             if len(ids) >= SEARCH_LIMIT:
@@ -243,12 +248,16 @@ def discover_ids():
             rows = min(100, SEARCH_LIMIT - len(ids))
             params = urllib.parse.urlencode({"q": query, "fl[]": "identifier", "rows": rows, "page": page, "output": "json"})
             docs = fetch_json("https://archive.org/advancedsearch.php?" + params).get("response", {}).get("docs", [])
-            ids.extend(x["identifier"] for x in docs if x.get("identifier"))
+            for x in docs:
+                ident = x.get("identifier")
+                if ident and ident not in seen:
+                    seen.add(ident)
+                    ids.append(ident)
             if len(docs) < rows:
                 break
         if len(ids) >= SEARCH_LIMIT:
             break
-    return list(dict.fromkeys(ids))
+    return ids
 
 
 def main():
