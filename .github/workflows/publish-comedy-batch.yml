@@ -17,7 +17,7 @@ jobs:
   build-comedy-catalog:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,22 +39,9 @@ jobs:
         id: revalidate
         continue-on-error: true
         run: python scripts/verify-existing-comedy.py
-      - name: Harden discovery for Archive rate limits
+      - name: Targeted repair of invalid or stale entries
         if: steps.revalidate.outcome != 'success'
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('scripts/build-comedy-catalog.py')
-          s=p.read_text()
-          s=s.replace('PREQUALIFIED_TARGET = 320','PREQUALIFIED_TARGET = 160')
-          s=s.replace('SEARCH_LIMIT = 3600','SEARCH_LIMIT = 5000')
-          s=s.replace('max_workers=72','max_workers=8')
-          s=s.replace('max_workers=28','max_workers=12')
-          p.write_text(s)
-          PY
-      - name: Rebuild exact batch when any source is stale
-        if: steps.revalidate.outcome != 'success'
-        run: python scripts/build-comedy-catalog.py
+        run: python scripts/repair-comedy-batch.py
       - name: Revalidate exactly 100 browser-playable comedy features
         run: python scripts/verify-existing-comedy.py
       - name: Install pinned pnpm
