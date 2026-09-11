@@ -18,7 +18,9 @@ BAD_TERMS=(
     'complete series','full season','playlist','bumper','bumpers','dvd iso','blu-ray iso','documentary',
     'talk show','variety show','music video','video essay','fan edit','behind the scenes','making of','recording',
     'recordings','reccording','reccordings','livestream','live stream','double feature','two movies',
-    'tv recordings','television recordings','cctv','channel bumpers','the johnny cash show'
+    'tv recordings','television recordings','cctv','channel bumpers','the johnny cash show',
+    'plays minecraft','gamertag','moviemax comedy','casados con hijos','video #','dead and buried treasures',
+    'may 19th, 2024','covid 19 plan','plandemic','sing-along edition','extended cut','anniversary edition'
 )
 
 def norm(s): return re.sub(r'[^a-z0-9]+',' ',str(s).lower()).strip()
@@ -123,7 +125,7 @@ def main():
     assert len(out)==TARGET and len({norm(x['titleEn']) for x in out})==TARGET
     assert all(valid_title(x) for x in out)
     CAT.write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    report={'target':100,'verified':100,'distinct':100,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'method':'targeted repair: reverified existing sources + expanded open-license feature-film discovery + ffprobe H.264/AAC-or-MP3 duration and ffmpeg decode checks'}
+    report={'target':100,'verified':100,'distinct':100,'generatedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'method':'targeted repair: strict feature-title gate + expanded open-license feature-film discovery + ffprobe H.264/AAC-or-MP3 duration and ffmpeg decode checks'}
     REPORT.write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report),flush=True)
 
