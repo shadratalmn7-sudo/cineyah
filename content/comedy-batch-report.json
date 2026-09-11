@@ -2,5 +2,6 @@
   "target": 100,
   "verified": 100,
   "distinct": 100,
-  "generatedAt": "2026-09-10T23:33:56.414207+00:00"
+  "generatedAt": "2026-09-11T21:26:11.294185+00:00",
+  "method": "revalidated existing batch: strict feature-title gate + ffprobe H.264/AAC-or-MP3 duration gate + real ffmpeg decode sample for all 100"
 }
