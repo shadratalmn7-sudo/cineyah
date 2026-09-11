@@ -2,10 +2,16 @@
 
 ## Production
 
-- Live URL: https://cineyah.shadrat-almn7.chatgpt.site
+- Legacy Sites URL: https://cineyah.shadrat-almn7.chatgpt.site
 - GitHub source: https://github.com/shadratalmn7-sudo/cineyah
 - Current verified Sites deployment: version 7, succeeded 2026-09-10
 - No custom domain, paid storage, paid CDN, or paid API is enabled.
+
+## GitHub Pages fallback / production mirror
+
+- Public fallback URL: https://shadratalmn7-sudo.github.io/cineyah/
+- The `deploy-github-pages.yml` workflow deploys the current `main` branch automatically on every push.
+- Use GitHub Pages as the stable public fallback whenever the legacy `chatgpt.site` hostname is unavailable or fails DNS resolution.
 
 ## Safe release procedure
 
