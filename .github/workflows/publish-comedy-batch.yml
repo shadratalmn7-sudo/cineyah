@@ -35,6 +35,13 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
+      - name: Revalidate existing comedy batch
+        id: revalidate
+        continue-on-error: true
+        run: python scripts/verify-existing-comedy.py
+      - name: Rebuild exact batch when any source is stale
+        if: steps.revalidate.outcome != 'success'
+        run: python scripts/build-comedy-catalog.py
       - name: Revalidate exactly 100 browser-playable comedy features
         run: python scripts/verify-existing-comedy.py
       - name: Install pinned pnpm
@@ -58,11 +65,11 @@ jobs:
           assert r['verified']==r['distinct']==r['target']==100
           print('verified exactly 100 distinct playback-tested comedy feature films')
           PY
-      - name: Commit refreshed verification report
+      - name: Commit verified comedy payload and report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/comedy-batch-report.json
+          git add content/generated-comedy.json content/comedy-batch-report.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "test: reverify 100 comedy playback sources"
+          git commit -m "content: refresh verified 100 comedy feature batch"
           git push origin HEAD:chatgpt/comedy-batch
