@@ -35,8 +35,8 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-      - name: Discover and playback-verify 100 comedy features
-        run: python scripts/build-comedy-catalog.py
+      - name: Revalidate exactly 100 browser-playable comedy features
+        run: python scripts/verify-existing-comedy.py
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.19.0
       - name: Install app dependencies
@@ -54,12 +54,15 @@ jobs:
           assert all('comedy' in x['genres'] for x in p)
           assert all(90 <= x['runtimeMinutes'] <= 210 for x in p)
           assert all(x['sources'] and x['sources'][0]['url'].startswith('https://') for x in p)
-          print('verified exactly 100 distinct comedy feature films')
+          r=json.load(open('content/comedy-batch-report.json'))
+          assert r['verified']==r['distinct']==r['target']==100
+          print('verified exactly 100 distinct playback-tested comedy feature films')
           PY
-      - name: Commit verified catalog
+      - name: Commit refreshed verification report
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/generated-comedy.json content/comedy-batch-report.json
-          git commit -m "feat: publish 100 playback-verified comedy movies"
+          git add content/comedy-batch-report.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "test: reverify 100 comedy playback sources"
           git push origin HEAD:chatgpt/comedy-batch
