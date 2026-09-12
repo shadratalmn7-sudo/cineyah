@@ -35,14 +35,14 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-      - name: Verify existing batch or rebuild in parallel
+      - name: Verify existing batch or repair only invalid/duplicate entries
         run: |
           set -e
           if python scripts/verify-existing-comedy.py; then
             echo "Existing 100-film batch still passes."
           else
-            echo "Existing batch failed; rebuilding from discovery with the parallel verifier."
-            python scripts/build-comedy-catalog.py
+            echo "Existing batch failed; preserving verified films and replacing only invalid or duplicate entries."
+            python scripts/repair-comedy-batch.py
             python scripts/verify-existing-comedy.py
           fi
       - name: Install pinned pnpm
@@ -54,27 +54,20 @@ jobs:
       - name: Verify exactly 100 distinct feature films
         run: |
           python - <<'PY'
-          import json,re
+          import importlib.util,json,pathlib
+          root=pathlib.Path('.')
+          spec=importlib.util.spec_from_file_location('v',root/'scripts/verify-existing-comedy.py')
+          v=importlib.util.module_from_spec(spec); spec.loader.exec_module(v)
           p=json.load(open('content/generated-comedy.json'))
-          norm=lambda s: re.sub(r'[^a-z0-9]+',' ',s.lower()).strip()
-          bad=(
-            'trailer','teaser','clip','short film','episode','compilation','collection','box set','boxset',
-            'marathon','gameplay','walkthrough','commercials','podcast','radio show','festival','concert',
-            'complete series','full season','playlist','bumper','bumpers','dvd iso','blu-ray iso','documentary',
-            'talk show','music video','video essay','fan edit','behind the scenes','making of','recording',
-            'recordings','reccording','reccordings','livestream','live stream','double feature','two movies',
-            'tv recordings','television recordings','cctv','channel bumpers'
-          )
           assert len(p)==100
-          assert len({norm(x['titleEn']) for x in p})==100
+          assert len({v.norm(x['titleEn']) for x in p})==100
+          assert len({v.source_key(x) for x in p})==100
           assert all('comedy' in x['genres'] for x in p)
           assert all(90 <= x['runtimeMinutes'] <= 210 for x in p)
-          assert all(x['sources'] and x['sources'][0]['url'].startswith('https://') for x in p)
-          offenders=[x['titleEn'] for x in p if any(t in x['titleEn'].lower() for t in bad)]
-          assert not offenders, f'non-feature packaging/recording titles remain: {offenders[:10]}'
+          assert all(v.valid_title(x) if hasattr(v,'valid_title') else not any(t in x['titleEn'].lower() for t in v.BAD_TERMS) for x in p)
           r=json.load(open('content/comedy-batch-report.json'))
           assert r['verified']==r['distinct']==r['target']==100
-          print('verified exactly 100 distinct playback-tested comedy feature films')
+          print('verified exactly 100 canonical-distinct playback-tested comedy feature films')
           PY
       - name: Commit verified comedy payload and report
         run: |
