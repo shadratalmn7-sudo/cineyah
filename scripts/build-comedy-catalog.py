@@ -11,8 +11,8 @@ import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TARGET = 100
-PREQUALIFIED_TARGET = 320
-SEARCH_LIMIT = 3600
+PREQUALIFIED_TARGET = 420
+SEARCH_LIMIT = 12000
 UA = "Cineyah/1.0 comedy-batch"
 
 ALLOWED_LICENSE_PATHS = {
@@ -33,7 +33,7 @@ BAD_TERMS={
 COMEDY_TERMS=("comedy","comedies","comic","slapstick","farce","romantic comedy","romcom","satire","humor","humour")
 
 
-def fetch_json(url,timeout=12):
+def fetch_json(url,timeout=20):
     req=urllib.request.Request(url,headers={"User-Agent":UA})
     with urllib.request.urlopen(req,timeout=timeout) as r:return json.load(r)
 
@@ -91,16 +91,14 @@ def source_rank(f):
     return score
 
 def looks_candidate(info,title,description,subjects,files):
-    # Archive descriptions routinely contain words such as "collection" and
-    # "recording" even for legitimate feature films. Reject packaging/episode
-    # markers from the title, while using description/subjects only for genre.
     title_low=title.lower()
-    genre_low=f"{title} {description} {' '.join(subjects)}".lower()
+    genre_bits=[]
+    for key in ("genre","genres","keywords","tags","subject"):
+        genre_bits.extend(clean(x) for x in vals(info.get(key)))
+    genre_low=f"{title} {description} {' '.join(subjects)} {' '.join(genre_bits)}".lower()
     if any(x in title_low for x in BAD_TERMS):return False
     if re.search(r"\b(ep\.?\s*\d+|episode\s*\d+|part\s*[2-9]\d*)\b",title,re.I):return False
     if not any(x in genre_low for x in COMEDY_TERMS):return False
-    # Runtime is the hard short-form gate. Metadata lengths are accepted only
-    # in the feature range; missing lengths are measured later with ffprobe.
     media=[f for f in files if str(f.get("name","")).lower().endswith(".mp4")]
     if not media:return False
     measured=[reported(f) for f in media if reported(f)>0]
@@ -123,12 +121,12 @@ def preinspect(identifier):
             choices.append(f)
         if not choices:return None
         choices.sort(key=source_rank,reverse=True)
-        return {"identifier":identifier,"safe":safe,"info":info,"title":title,"description":desc,"license":lic,"files":choices[:4]}
+        return {"identifier":identifier,"safe":safe,"info":info,"title":title,"description":desc,"license":lic,"files":choices[:6]}
     except Exception:return None
 
 def probe_and_decode(url):
     try:
-        p=subprocess.run(["ffprobe","-v","error","-rw_timeout","10000000","-show_entries","format=duration:stream=codec_name,codec_type","-of","json",url],capture_output=True,text=True,timeout=18)
+        p=subprocess.run(["ffprobe","-v","error","-rw_timeout","25000000","-show_entries","format=duration:stream=codec_name,codec_type","-of","json",url],capture_output=True,text=True,timeout=35)
         if p.returncode:return None
         d=json.loads(p.stdout or "{}"); streams=d.get("streams",[])
         video=[s.get("codec_name") for s in streams if s.get("codec_type")=="video"]
@@ -138,7 +136,7 @@ def probe_and_decode(url):
         duration=float(d.get("format",{}).get("duration") or 0)
         if not 5400<=duration<=12600:return None
         sample=min(max(30,duration*0.2),duration-5)
-        q=subprocess.run(["ffmpeg","-v","error","-rw_timeout","10000000","-ss",str(sample),"-i",url,"-t","1","-map","0:v:0","-f","null","-"],capture_output=True,text=True,timeout=18)
+        q=subprocess.run(["ffmpeg","-v","error","-rw_timeout","25000000","-ss",str(sample),"-i",url,"-t","1","-map","0:v:0","-f","null","-"],capture_output=True,text=True,timeout=35)
         if q.returncode:return None
         return duration
     except Exception:return None
@@ -157,18 +155,28 @@ def verify(c):
 def discover_ids():
     queries=[
         'mediatype:movies AND subject:comedy',
+        'mediatype:movies AND genre:comedy',
+        'mediatype:movies AND genre:"Comedy"',
+        'mediatype:movies AND keywords:comedy',
+        'mediatype:movies AND tags:comedy',
         'mediatype:movies AND (subject:slapstick OR subject:farce OR subject:satire)',
+        'mediatype:movies AND (genre:slapstick OR genre:farce OR genre:satire)',
         'mediatype:movies AND subject:"romantic comedy"',
+        'mediatype:movies AND genre:"romantic comedy"',
         'mediatype:movies AND (subject:humor OR subject:humour)',
+        'mediatype:movies AND (genre:humor OR genre:humour)',
         'mediatype:movies AND title:comedy',
+        'mediatype:movies AND description:comedy',
         'mediatype:movies AND collection:feature_films AND (comedy OR humor OR satire)',
+        'mediatype:movies AND licenseurl:* AND (genre:comedy OR subject:comedy OR description:comedy)',
     ]
     out=[]; seen=set()
     for q in queries:
-        for page in range(1,26):
+        for page in range(1,41):
             if len(out)>=SEARCH_LIMIT:break
             params=urllib.parse.urlencode({"q":q,"fl[]":"identifier","rows":100,"page":page,"output":"json"})
-            docs=fetch_json("https://archive.org/advancedsearch.php?"+params).get("response",{}).get("docs",[])
+            try: docs=fetch_json("https://archive.org/advancedsearch.php?"+params).get("response",{}).get("docs",[])
+            except Exception: break
             for d in docs:
                 i=d.get("identifier")
                 if i and i not in seen:seen.add(i);out.append(i)
@@ -181,7 +189,7 @@ def main():
     pre=[]; seen_titles=set()
     for start in range(0,len(ids),300):
         chunk=ids[start:start+300]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=72) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=48) as pool:
             futures=[pool.submit(preinspect,i) for i in chunk]
             for fut in concurrent.futures.as_completed(futures):
                 x=fut.result()
@@ -192,15 +200,19 @@ def main():
         print(json.dumps({"stage":"prequalified","count":len(pre),"scanned":min(start+300,len(ids))}),flush=True)
         if len(pre)>=PREQUALIFIED_TARGET:break
     if len(pre)<TARGET:raise SystemExit(f"Only {len(pre)} prequalified comedy features; need {TARGET}")
-    found=[]; final_seen=set()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=28) as pool:
+    found=[]; final_seen=set(); source_seen=set(); duration_seen=set()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
         futures=[pool.submit(verify,x) for x in pre]
         for fut in concurrent.futures.as_completed(futures):
             x=fut.result()
             if not x:continue
-            k=norm(x["titleEn"])
-            if not k or k in final_seen:continue
-            final_seen.add(k);found.append(x);print(json.dumps({"verified":len(found),"title":x["titleEn"]}),flush=True)
+            k=norm(x["titleEn"]); sk=x['sources'][0]['url'].lower()
+            if not k or k in final_seen or sk in source_seen:continue
+            d=probe_and_decode(sk)
+            if not d: continue
+            dk=round(float(d),2)
+            if dk in duration_seen: continue
+            final_seen.add(k); source_seen.add(sk); duration_seen.add(dk); found.append(x);print(json.dumps({"verified":len(found),"title":x["titleEn"]}),flush=True)
             if len(found)>=TARGET:
                 for f in futures:f.cancel()
                 break
@@ -210,7 +222,7 @@ def main():
     assert all(90<=x["runtimeMinutes"]<=210 for x in published)
     assert all(x["sources"] and x["sources"][0]["url"].startswith("https://") for x in published)
     (ROOT/"content/generated-comedy.json").write_text(json.dumps(published,ensure_ascii=False,indent=2)+"\n")
-    report={"target":TARGET,"verified":TARGET,"distinct":TARGET,"generatedAt":dt.datetime.now(dt.timezone.utc).isoformat(),"method":"open-license/public-domain metadata gate + ffprobe H.264/AAC duration check + real ffmpeg decode sample"}
+    report={"target":TARGET,"verified":TARGET,"distinct":TARGET,"generatedAt":dt.datetime.now(dt.timezone.utc).isoformat(),"method":"open-license/public-domain metadata gate + ffprobe H.264/AAC duration check + real ffmpeg decode sample; genre/keywords/subject/description discovery"}
     (ROOT/"content/comedy-batch-report.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps(report),flush=True)
 
