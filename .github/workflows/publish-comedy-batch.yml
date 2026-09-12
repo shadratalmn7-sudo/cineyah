@@ -17,7 +17,7 @@ jobs:
   build-comedy-catalog:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,17 +35,16 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-      - name: Repair and revalidate until exactly 100 pass
+      - name: Verify existing batch or rebuild in parallel
         run: |
           set -e
-          for attempt in 1 2 3; do
-            echo "verification attempt $attempt"
-            if python scripts/verify-existing-comedy.py; then
-              exit 0
-            fi
-            python scripts/repair-comedy-batch.py
-          done
-          python scripts/verify-existing-comedy.py
+          if python scripts/verify-existing-comedy.py; then
+            echo "Existing 100-film batch still passes."
+          else
+            echo "Existing batch failed; rebuilding from discovery with the parallel verifier."
+            python scripts/build-comedy-catalog.py
+            python scripts/verify-existing-comedy.py
+          fi
       - name: Install pinned pnpm
         run: npm install --global pnpm@11.19.0
       - name: Install app dependencies
